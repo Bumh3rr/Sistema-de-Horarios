@@ -9,24 +9,16 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 # Habilitar mod_rewrite
 RUN a2enmod rewrite
 
+# Configurar Apache para puerto 8080
+RUN sed -i 's/80/8080/g' /etc/apache2/sites-available/000-default.conf 
+/etc/apache2/ports.conf
+
 # Copiar archivos del proyecto
 COPY . /var/www/html/
 
 # Establecer permisos
 RUN chown -R www-data:www-data /var/www/html
 
-# Crear script de inicio que configure el puerto dinámicamente
-RUN echo '#!/bin/bash' > /usr/local/bin/start-apache.sh && \
-    echo 'set -e' >> /usr/local/bin/start-apache.sh && \
-    echo 'PORT=${PORT:-8080}' >> /usr/local/bin/start-apache.sh && \
-    echo 'sed -i "s/Listen 80/Listen $PORT/g" /etc/apache2/ports.conf' >> 
-/usr/local/bin/start-apache.sh && \
-    echo 'sed -i "s/<VirtualHost \*:80>/<VirtualHost *:$PORT>/g" 
-/etc/apache2/sites-available/000-default.conf' >> 
-/usr/local/bin/start-apache.sh && \
-    echo 'exec apache2-foreground' >> /usr/local/bin/start-apache.sh && \
-    chmod +x /usr/local/bin/start-apache.sh
-
 EXPOSE 8080
 
-CMD ["/usr/local/bin/start-apache.sh"]
+CMD ["apache2-foreground"]
