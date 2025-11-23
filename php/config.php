@@ -6,25 +6,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Configuración de la base de datos
-define('DB_HOST', ${'MY_DB_HOST'});
-define('DB_USER', ${'MY_DB_USER'});
-define('DB_PASS', ${'MY_DB_PASS'});
-define('DB_NAME', ${'MY_DB_NAME'});
-define('DB_PORT', ${'MY_DB_PORT'});
-
-/*
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', 'Manuelromero20@');
-define('DB_NAME', 'sistema_horarios');
-define('DB_PORT', '3306');
-
-define('DB_HOST', 'hopper.proxy.rlwy.net');
-define('DB_USER', 'root');
-define('DB_PASS', 'HOVuDjmacUhnMnByaKxNjfGRnQVowyON');
-define('DB_NAME', 'railway');
-define('DB_PORT', '45520');
-*/
+define('DB_HOST', getenv('MY_DB_HOST'));
+define('DB_USER', getenv('MY_DB_USER'));
+define('DB_PASS', getenv('MY_DB_PASS'));
+define('DB_NAME', getenv('MY_DB_NAME'));
+define('DB_PORT', getenv('MY_DB_PORT'));
 
 // Zona horaria
 date_default_timezone_set('America/Mexico_City');
