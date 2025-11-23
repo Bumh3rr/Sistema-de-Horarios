@@ -6,11 +6,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Configuración de la base de datos
-define('DB_HOST', ${'DB_HOST'});
-define('DB_USER', ${'DB_USER'});
-define('DB_PASS', ${'DB_PASS'});
-define('DB_NAME', ${'DB_NAME'});
-define('DB_PORT', ${'DB_PORT'});
+define('DB_HOST', '${MY_DB_HOST}');
+define('DB_USER', '${MY_DB_USER}');
+define('DB_PASS', '${MY_DB_PASS}');
+define('DB_NAME', '${MY_DB_NAME}');
+define('DB_PORT', '${MY_DB_PORT}');
 
 /*
 define('DB_HOST', 'localhost');
