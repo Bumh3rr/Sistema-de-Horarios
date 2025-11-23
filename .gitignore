@@ -4,3 +4,4 @@
 .idea/dataSources.xml
 .idea/data_source_mapping.xml
 .idea/php.xml
+.env
