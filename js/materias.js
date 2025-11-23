@@ -1,4 +1,7 @@
 import {showLoading, notyf} from './notify/Config.js';
+import {ModalManager} from './utils/ModalManager.js';
+
+const modalManager = new ModalManager();
 
 document.addEventListener('DOMContentLoaded', function () {
     loadMaterias();
@@ -8,9 +11,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', debounce(function () {
-            console.log(searchInput.value);
             loadMaterias();
-        }, 300));
+        }, 550));
     }
 
     // Filtros
@@ -67,8 +69,10 @@ async function loadMaterias() {
     const semestre = document.getElementById('filterSemestre')?.value || '';
 
     try {
+        showLoading(true);
         const response = await fetch(`../php/materias_api.php?action=list&search=${encodeURIComponent(search)}&carrera=${carrera}&semestre=${semestre}`);
         const data = await response.json();
+        showLoading(false);
 
         if (data.success) {
             renderMaterias(data.data);
@@ -78,6 +82,8 @@ async function loadMaterias() {
     } catch (error) {
         console.error('Error:', error);
         tbody.innerHTML = '<tr><td colspan="7" class="text-center">Error al cargar materias</td></tr>';
+    } finally {
+        showLoading(false);
     }
 }
 
@@ -100,11 +106,6 @@ function renderMaterias(materias) {
             <td>${materia.horas_semanales} hrs</td>
             <td>
                 <div class="flex gap-1">
-                    <!-- Botones de acción 
-                    <button class="btn btn-sm btn-primary" onclick="editMateria(${materia.id})" title="Editar">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M3 21v-2a4 4 0 0 1 4-4h4c.96 0 1.84.338 2.53.901M16 3.13a4 4 0 0 1 0 7.75M16 19h6m-3-3v6"/></svg>
-                    </button>
-                    -->
                     <button class="btn btn-sm btn-secondary" onclick="editMateria(${materia.id})" title="Editar">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -154,6 +155,18 @@ async function handleSubmitMateria(e) {
 
     formData.set('action', action);
 
+    modalManager.openInfo(
+        'Confirmar Acción',
+        `¿Estás seguro de que deseas ${action === 'create' ? 'crear' : 'actualizar'} esta materia?`,
+        async () => {
+            await confirmSubmitMateria(formData, form);
+            modalManager.closeModal(ModalManager.ModalType.INFO);
+        }
+    );
+}
+
+// Enviar formulario de materia
+async function confirmSubmitMateria(formData, form) {
     try {
         showLoading(true);
         const response = await fetch('../php/materias_api.php', {
@@ -162,19 +175,27 @@ async function handleSubmitMateria(e) {
         });
 
         const data = await response.json();
+        showLoading(false);
 
         if (data.success) {
             notyf.success(data.message);
             closeModal('modalMateria');
-            await loadMaterias();
-            form.reset();
+            modalManager.openSuccess(
+                'Operación Exitosa',
+                `La materia ha sido ${formData.get('action') === 'create' ? 'creada' : 'actualizada'} exitosamente.`,
+                () => {
+                    loadMaterias();
+                    form.reset();
+                    modalManager.closeModalPop();
+                });
+
         } else {
-            showAlert(data.message, 'error');
+            notyf.error(data.message);
         }
     } catch (error) {
         console.error('Error:', error);
         notyf.error('Error al guardar la materia');
-    }finally {
+    } finally {
         showLoading(false);
     }
 }
@@ -182,9 +203,11 @@ async function handleSubmitMateria(e) {
 // Editar materia
 window.editMateria = async (id) => {
     try {
+        showLoading(true);
         const response = await fetch(`../php/materias_api.php?action=get&id=${id}`);
         const data = await response.json();
 
+        showLoading(false);
         if (data.success) {
             const materia = data.data;
 
@@ -200,20 +223,29 @@ window.editMateria = async (id) => {
             document.getElementById('modalMateriaTitle').textContent = 'Editar Materia';
             openModal('modalMateria');
         } else {
-            showAlert(data.message, 'error');
+            notyf.error(data.message);
         }
     } catch (error) {
         console.error('Error:', error);
-        showAlert('Error al cargar la materia', 'error');
+        notyf.error('Error al cargar la materia');
+    } finally {
+        showLoading(false);
     }
 }
 
 window.deleteMateria = async (id) => {
-    if (!confirmDelete('¿Estás seguro de que deseas eliminar esta materia?')) {
-        return;
-    }
+    modalManager.openWarning(
+        '¿Estás seguro de que deseas eliminar esta materia?',
+        'Esta acción no se puede deshacer.',
+        async () => {
+            await confirmDeleteMateria(id);
+            modalManager.closeModalPop();
+        });
+};
 
+async function confirmDeleteMateria(id) {
     try {
+        showLoading(true);
         const formData = new FormData();
         formData.append('action', 'delete');
         formData.append('id', id);
@@ -224,15 +256,18 @@ window.deleteMateria = async (id) => {
         });
 
         const data = await response.json();
+        showLoading(false);
 
         if (data.success) {
-            showAlert(data.message, 'success');
-            loadMaterias();
+            notyf.success(data.message);
+            await loadMaterias();
         } else {
-            showAlert(data.message, 'error');
+            notyf.error(data.message);
         }
     } catch (error) {
         console.error('Error:', error);
-        showAlert('Error al eliminar la materia', 'error');
+        notyf.error('Error al eliminar la materia');
+    } finally {
+        showLoading(false);
     }
 }

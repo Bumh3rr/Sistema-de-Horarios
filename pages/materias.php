@@ -10,11 +10,15 @@ requireLogin();
     <title>Gestión de Materias</title>
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+    <link rel="stylesheet" href="../css/styles-modal.css">
 </head>
 <body>
 <div class="dashboard">
     <?php include './components/sidebar.php'; ?>
     <?php include './components/loading.php'; ?>
+    <?php include './components/modal-success.php'; ?>
+    <?php include './components/modal-warning.php'; ?>
+    <?php include './components/modal-info.php'; ?>
 
     <div class="main-content">
         <div class="topbar">
@@ -153,35 +157,6 @@ requireLogin();
         </form>
     </div>
 </div>
-
-<!-- Modal Materia
-<div id="modalMateria" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div class="content-title-modal">
-                <div class="ico-modal">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="#5046e5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M3 21v-2a4 4 0 0 1 4-4h4c.96 0 1.84.338 2.53.901M16 3.13a4 4 0 0 1 0 7.75M16 19h6m-3-3v6"/></svg>                </div>
-                <h3 class="modal-title" id="modalMateriaTitle">Agregar Estudiantes ala Matería</h3>
-            </div>
-            <button class="modal-close" onclick="closeModal('modalMateria')">&times;</button>
-        </div>
-        <form id="formMateriaEstudiantes">
-            <div class="modal-body">
-                <input type="hidden" id="estudiantes_materia_id" name="estudiantes_materia_id">
-
-                <div class="form-group">
-                    <label class="form-label">Nombre de la Materia</label>
-                    <input type="number" id="numero_estudiantes" name="numero_estudiantes" class="form-input" placeholder="Ej: 30" required>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('modalMateria')">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Guardar</button>
-            </div>
-        </form>
-    </div>
-</div>
--->
 
 <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
 <script src="../js/main.js"></script>

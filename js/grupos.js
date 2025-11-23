@@ -1,5 +1,7 @@
 import {showLoading, notyf} from './notify/Config.js';
+import {ModalManager} from './utils/ModalManager.js';
 
+const modalManager = new ModalManager();
 // Gestión de Grupos
 document.addEventListener('DOMContentLoaded', function () {
     loadGrupos();
@@ -42,7 +44,11 @@ function renderGrupos(grupos) {
         <tr>
             <td><strong>${grupo.nombre}</strong></td>
             <td>${grupo.materia_nombre}</td>
-            <td>${grupo.profesor_nombre}</td>
+         <td>
+            <div class="badge ${grupo.profesor_nombre ? 'badge-info' : 'badge-error'}">
+                ${grupo.profesor_nombre ? grupo.profesor_nombre : 'Sin asignar'}
+            </div>
+        </td>
             <td>${grupo.num_estudiantes} / ${grupo.cupo_maximo}</td>
             <td>${grupo.periodo_academico}</td>
             <td>
@@ -110,8 +116,18 @@ async function handleSubmitGrupo(e) {
     const formData = new FormData(form);
     const grupo_id = formData.get('grupo_id');
     const action = grupo_id ? 'update' : 'create';
-
     formData.set('action', action);
+
+    modalManager.openInfo(
+        'Confirmar Acción',
+        `¿Estás seguro de que deseas ${action === 'create' ? 'crear' : 'actualizar'} este grupo?`,
+        async () => {
+            await confirmSubmitGrupo(formData, form, action);
+            modalManager.closeModal(ModalManager.ModalType.INFO);
+        });
+}
+
+async function confirmSubmitGrupo(formData, form, action) {
 
     try {
         showLoading(true);
@@ -124,16 +140,23 @@ async function handleSubmitGrupo(e) {
         showLoading(false);
         if (data.success) {
             notyf.success(data.message);
-            closeModal('modalGrupo');
-            await loadGrupos();
-            form.reset();
+            closeModal('modalGrupo'); // Modal Close Grupo
+            modalManager.openSuccess( // Modal Success
+                'Operación Exitosa',
+                `El grupo ha sido ${action === 'create' ? 'creado' : 'actualizado'} exitosamente.`,
+                () => {
+                    form.reset();
+                    loadGrupos();
+                    modalManager.closeModalPop();
+                });
+
         } else {
             notyf.error(data.message);
         }
     } catch (error) {
         console.error('Error:', error);
         notyf.error('Error al guardar el grupo');
-    }finally {
+    } finally {
         showLoading(false);
     }
 }
@@ -169,10 +192,16 @@ window.editGrupo = async (id) => {
 }
 
 window.deleteGrupo = async (id) => {
-    if (!confirmDelete('¿Estás seguro de que deseas eliminar este grupo?')) {
-        return;
-    }
+    modalManager.openWarning(
+        '¿Estás seguro de que deseas eliminar este grupo?',
+        'Esta acción no se puede deshacer.',
+        async () => {
+            await confirmDeleteGrupo(id);
+            modalManager.closeModalPop();
+        });
+};
 
+async function confirmDeleteGrupo(id) {
     try {
         showLoading(true);
         const formData = new FormData();
@@ -196,7 +225,7 @@ window.deleteGrupo = async (id) => {
     } catch (error) {
         console.error('Error:', error);
         notyf.error('Error al eliminar el grupo')
-    }finally {
+    } finally {
         showLoading(false);
     }
 }

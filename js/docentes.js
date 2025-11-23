@@ -1,4 +1,7 @@
 import {showLoading, notyf} from './notify/Config.js';
+import {ModalManager} from './utils/ModalManager.js';
+
+const modalManager = new ModalManager();
 
 // Gestión de Docentes
 document.addEventListener('DOMContentLoaded', function () {
@@ -10,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (searchInput) {
         searchInput.addEventListener('input', debounce(function () {
             loadDocentes();
-        }, 300));
+        }, 550));
     }
 
     // Filtro por estado
@@ -69,7 +72,6 @@ async function loadDocentes() {
     try {
         showLoading(true);
         // delay to show loading
-        await new Promise(resolve => setTimeout(resolve, 1000));
         const response = await fetch(`../php/docentes_api.php?action=list&search=${encodeURIComponent(search)}&activo=${activo}`);
         const data = await response.json();
 
@@ -177,6 +179,17 @@ async function handleSubmitDocente(e) {
     formData.set('activo', document.getElementById('activo').checked ? '1' : '0');
     formData.set('action', action);
 
+    modalManager.openInfo(
+        'Confirmar Acción',
+        `¿Estás seguro de que deseas ${action === 'create' ? 'crear' : 'actualizar'} este docente?`,
+        async () => {
+            await submitDocenteForm(formData, form, action);
+            modalManager.closeModal(ModalManager.ModalType.INFO);
+        });
+}
+
+// Enviar formulario al servidor
+async function submitDocenteForm(formData, form, action) {
     try {
         showLoading(true);
         const response = await fetch('../php/docentes_api.php', {
@@ -189,21 +202,27 @@ async function handleSubmitDocente(e) {
         if (data.success) {
             notyf.success(data.message);
             closeModal('modalDocente');
-            await loadDocentes();
             form.reset();
+
+            modalManager.openSuccess(
+                'Operación Exitosa',
+                `El docente ha sido ${action === 'create' ? 'registrado' : 'actualizado'} exitosamente.`,
+                () => {
+                    loadDocentes();
+                    modalManager.closeModalPop();
+                });
+
+
         } else {
             notyf.error(data.message);
         }
     } catch (error) {
         console.error('Error:', error);
         notyf.error('Error al guardar el docente');
-    }finally {
+    } finally {
         showLoading(false);
     }
 }
-
-
-
 
 // Renderizar horario del docente
 function renderHorarioDocente(horarios) {
@@ -231,12 +250,7 @@ function renderHorarioDocente(horarios) {
     });
 }
 
-// Eliminar docente
-window.deleteDocente = async (id) => {
-    if (!confirmDelete('¿Estás seguro de que deseas eliminar este docente? También se eliminarán sus grupos asignados.')) {
-        return;
-    }
-
+async function performDeleteDocente(id) {
     try {
         showLoading(true);
 
@@ -261,13 +275,23 @@ window.deleteDocente = async (id) => {
         }
     } catch (error) {
         notyf.error('Error al eliminar el docente');
-    }finally {
+    } finally {
         showLoading(false);
     }
 }
 
+// Eliminar docente
+window.deleteDocente = async (id) => {
+    modalManager.openWarning('Confirmar Eliminación',
+        '¿Estás seguro de que deseas eliminar este docente?', async () => {
+            await performDeleteDocente(id);
+            modalManager.closeModalPop();
+        });
+}
+
 // Editar docente
 window.editDocente = async (id) => {
+
     try {
         showLoading(true);
         const response = await fetch(`../php/docentes_api.php?action=get&id=${id}`);
@@ -292,7 +316,7 @@ window.editDocente = async (id) => {
         }
     } catch (error) {
         notyf.error('Error al cargar el docente');
-    }finally {
+    } finally {
         showLoading(false)
     }
 }
@@ -336,7 +360,7 @@ window.viewHorarioDocente = async (id) => {
     } catch (error) {
         console.error('Error:', error);
         notyf.error('Error al cargar el horario');
-    }finally {
+    } finally {
         showLoading(false)
     }
 }

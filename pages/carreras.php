@@ -8,6 +8,7 @@ requireLogin();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Carreras</title>
+    <link rel="stylesheet" href="../css/styles-modal.css">
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
 
@@ -16,6 +17,9 @@ requireLogin();
 <div class="dashboard">
     <?php include './components/sidebar.php'; ?>
     <?php include './components/loading.php'; ?>
+    <?php include './components/modal-info.php'; ?>
+    <?php include './components/modal-warning.php'; ?>
+    <?php include './components/modal-success.php'; ?>
 
     <div class="main-content">
         <div class="topbar">

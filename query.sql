@@ -1,9 +1,9 @@
 -- Base de datos para Sistema de Gestión de Horarios Académicos
-DROP DATABASE IF EXISTS sistema_horarios;
-CREATE DATABASE IF NOT EXISTS sistema_horarios CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE sistema_horarios;
+DROP DATABASE IF EXISTS railway;
+CREATE DATABASE IF NOT EXISTS railway CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE railway;
 
--- Tabla de docentes (reemplaza usuarios)
+-- Tabla de docentes
 CREATE TABLE IF NOT EXISTS docente
 (
     id             INT AUTO_INCREMENT PRIMARY KEY,
@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS materias
     horas_semanales INT                NOT NULL,
     descripcion     TEXT,
     activo          BOOLEAN   DEFAULT TRUE,
+    alumnos_inscriptos      BOOLEAN   DEFAULT FALSE,
     fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (carrera_id) REFERENCES carreras (id) ON DELETE CASCADE,
     INDEX idx_carrera (carrera_id),
@@ -66,13 +67,9 @@ CREATE TABLE IF NOT EXISTS aulas
         'laboratorio',
         'auditorio',
         'taller',
-        'computacion',     -- aulas con PC y software
-        'redes',           -- laboratorio de redes y switches
-        'software',        -- laboratorio orientado a desarrollo y pruebas
-        'multimedia',      -- proyector / audio avanzado
-        'proyecto'        -- espacios para trabajo en equipo y proyectos
+        'computacion',
+        'software'
         ) DEFAULT 'teorica',
-    recursos       TEXT,
     activo         BOOLEAN                                                DEFAULT TRUE,
     fecha_creacion TIMESTAMP                                              DEFAULT CURRENT_TIMESTAMP
 ) ENGINE = InnoDB
@@ -84,7 +81,7 @@ CREATE TABLE IF NOT EXISTS grupos
 (
     id                INT AUTO_INCREMENT PRIMARY KEY,
     materia_id        INT         NOT NULL,
-    profesor_id       INT         NOT NULL,
+    profesor_id       INT         NULL,
     nombre            VARCHAR(50) NOT NULL,
     cupo_maximo       INT         NOT NULL,
     alumnos_inscriptos INT         NOT NULL,
@@ -93,7 +90,7 @@ CREATE TABLE IF NOT EXISTS grupos
     activo            BOOLEAN   DEFAULT TRUE,
     fecha_creacion    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (materia_id) REFERENCES materias (id) ON DELETE CASCADE,
-    FOREIGN KEY (profesor_id) REFERENCES docente (id) ON DELETE CASCADE,
+    FOREIGN KEY (profesor_id) REFERENCES docente (id) ON DELETE SET NULL,
     INDEX idx_materia (materia_id),
     INDEX idx_profesor (profesor_id),
     INDEX idx_periodo (periodo_academico)
@@ -107,7 +104,7 @@ CREATE TABLE IF NOT EXISTS horarios
     id             INT AUTO_INCREMENT PRIMARY KEY,
     grupo_id       INT                                                                  NOT NULL,
     aula_id        INT                                                                  NOT NULL,
-    dia_semana     ENUM ('Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado') NOT NULL,
+    dia_semana     ENUM ('Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes')           NOT NULL,
     hora_inicio    TIME                                                                 NOT NULL,
     hora_fin       TIME                                                                 NOT NULL,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -124,10 +121,10 @@ CREATE TABLE IF NOT EXISTS horarios
 INSERT INTO carreras (nombre, codigo, descripcion, duracion_semestres)
 VALUES
     ('Ingeniería en Sistemas Computacionales', 'ISC', 'Carrera enfocada en el desarrollo de software y sistemas', 9),
-       ('Ingeniería Civil', 'IC', 'Carrera de construcción e infraestructura', 10),
-       ('Licenciatura en Administración', 'LA', 'Carrera de gestión empresarial', 8),
-       ('Licenciatura en Contaduría', 'LC', 'Carrera de Contador Público', 10),
-       ('Ingeniería Informática', 'II', 'Carrera de Ingeniería en Informática', 10)
+    ('Ingeniería Civil', 'IC', 'Carrera de construcción e infraestructura', 10),
+    ('Licenciatura en Administración', 'LA', 'Carrera de gestión empresarial', 8),
+    ('Licenciatura en Contaduría', 'LC', 'Carrera de Contador Público', 10),
+    ('Ingeniería Informática', 'II', 'Carrera de Ingeniería en Informática', 10)
 ;
 
 INSERT INTO docente (nombre, apellido, email, rfc, telefono)
@@ -178,9 +175,11 @@ VALUES (1, 1, 'POO-A', 30,30, '3', 'Agosto-Diciembre 2024'),
 
 INSERT INTO horarios (grupo_id, aula_id, dia_semana, hora_inicio, hora_fin)
 VALUES (1, 1, 'Lunes', '07:00:00', '09:00:00'),
-       (1, 1, 'Miércoles', '07:00:00', '09:00:00'),
        (1, 1, 'Viernes', '07:00:00', '09:00:00'),
        (2, 2, 'Martes', '09:00:00', '11:00:00'),
        (2, 2, 'Jueves', '09:00:00', '11:00:00'),
-       (3, 3, 'Lunes', '11:00:00', '13:00:00'),
-       (3, 3, 'Miércoles', '11:00:00', '13:00:00');
+       (3, 3, 'Lunes', '11:00:00', '13:00:00');
+
+
+select * from grupos;
+select * from materias;

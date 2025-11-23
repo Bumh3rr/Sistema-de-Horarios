@@ -45,7 +45,9 @@ requireLogin();
                                 <option value="">Todos los tipos</option>
                                 <option value="teorica">Teórica</option>
                                 <option value="laboratorio">Laboratorio</option>
+                                <option value="computacion">Computación</option>
                                 <option value="auditorio">Auditorio</option>
+                                <option value="software">Software</option>
                                 <option value="taller">Taller</option>
                             </select>
                         </div>
@@ -64,7 +66,6 @@ requireLogin();
                                 <th>Edificio</th>
                                 <th>Capacidad</th>
                                 <th>Tipo</th>
-                                <th>Recursos</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
@@ -115,15 +116,12 @@ requireLogin();
                             <option value="">Seleccionar...</option>
                             <option value="teorica">Teórica</option>
                             <option value="laboratorio">Laboratorio</option>
+                            <option value="computacion">Computación</option>
                             <option value="auditorio">Auditorio</option>
+                            <option value="software">Software</option>
                             <option value="taller">Taller</option>
                         </select>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Recursos disponibles</label>
-                    <textarea id="recursos" name="recursos" class="form-input" rows="3" placeholder="Ej: Proyector, pizarra inteligente, aire acondicionado"></textarea>
                 </div>
 
                 <div class="form-group">

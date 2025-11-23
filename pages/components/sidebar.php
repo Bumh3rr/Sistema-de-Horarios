@@ -11,6 +11,7 @@ $menu = [
                 ['name' => 'Docentes', 'page' => 'docentes', 'icon' => 'user'],
                 ['name' => 'Carreras', 'page' => 'carreras', 'icon' => 'briefcase'],
                 ['name' => 'Materias', 'page' => 'materias', 'icon' => 'book'],
+                ['name' => 'Alumnos', 'page' => 'alumnos', 'icon' => 'users'],
                 ['name' => 'Grupos', 'page' => 'grupos', 'icon' => 'users'],
                 ['name' => 'Aulas', 'page' => 'aulas', 'icon' => 'building'],
         ]

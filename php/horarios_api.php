@@ -28,25 +28,25 @@ function listHorarios() {
     
     $grupo = cleanInput($_GET['grupo'] ?? '');
     
-    $sql = "SELECT h.*, 
-            g.nombre as grupo_nombre,
-            m.nombre as materia_nombre,
-            CONCAT(u.nombre, ' ', u.apellido) as profesor_nombre,
-            a.nombre as aula_nombre,
-            a.edificio as aula_edificio
-            FROM horarios h
-            JOIN grupos g ON h.grupo_id = g.id
-            JOIN materias m ON g.materia_id = m.id
-            JOIN usuarios u ON g.profesor_id = u.id
-            JOIN aulas a ON h.aula_id = a.id
-            WHERE 1=1";
+$sql = "SELECT h.*, 
+        g.nombre as grupo_nombre,
+        m.nombre as materia_nombre,
+        CONCAT(u.nombre, ' ', u.apellido) as profesor_nombre,
+        a.nombre as aula_nombre,
+        a.edificio as aula_edificio
+        FROM horarios h
+        JOIN grupos g ON h.grupo_id = g.id
+        JOIN materias m ON g.materia_id = m.id
+        JOIN docente u ON g.profesor_id = u.id
+        JOIN aulas a ON h.aula_id = a.id
+        WHERE 1=1";
     
     if ($grupo) {
         $sql .= " AND h.grupo_id = '$grupo'";
     }
     
     $sql .= " ORDER BY 
-              FIELD(h.dia_semana, 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'),
+              FIELD(h.dia_semana, 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'),
               h.hora_inicio";
     
     $result = $conn->query($sql);
@@ -64,15 +64,16 @@ function getSchedule() {
     
     $grupo = cleanInput($_GET['grupo'] ?? '');
     
-    $sql = "SELECT h.*, 
+    $sql = "SELECT h.*,
             g.nombre as grupo_nombre,
             m.nombre as materia_nombre,
             CONCAT(u.nombre, ' ', u.apellido) as profesor_nombre,
-            a.nombre as aula_nombre
+            a.nombre as aula_nombre,
+            a.edificio as aula_edificio
             FROM horarios h
             JOIN grupos g ON h.grupo_id = g.id
             JOIN materias m ON g.materia_id = m.id
-            JOIN usuarios u ON g.profesor_id = u.id
+            LEFT JOIN docente u ON g.profesor_id = u.id
             JOIN aulas a ON h.aula_id = a.id
             WHERE 1=1";
     

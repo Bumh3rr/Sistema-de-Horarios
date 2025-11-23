@@ -29,8 +29,6 @@ requireLogin();
             </div>
 
             <div class="content-wrapper">
-                <div id="alertContainer"></div>
-
                 <!-- Filtros -->
                 <div class="card mb-3">
                     <div class="card-body">
@@ -80,17 +78,14 @@ requireLogin();
                                 <div class="schedule-header">Miércoles</div>
                                 <div class="schedule-header">Jueves</div>
                                 <div class="schedule-header">Viernes</div>
-                                <div class="schedule-header">Sábado</div>
-                                
+
                                 <!-- Horarios de 7:00 a 21:00 -->
                                 <?php
                                 $horas = [
                                     '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00',
-                                    '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00',
-                                    '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00', '18:00 - 19:00',
-                                    '19:00 - 20:00', '20:00 - 21:00'
+                                    '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00'
                                 ];
-                                $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                                $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
                                 
                                 foreach ($horas as $hora) {
                                     echo "<div class='schedule-time'>{$hora}</div>";
@@ -171,7 +166,6 @@ requireLogin();
                             <option value="Miércoles">Miércoles</option>
                             <option value="Jueves">Jueves</option>
                             <option value="Viernes">Viernes</option>
-                            <option value="Sábado">Sábado</option>
                         </select>
                     </div>
 

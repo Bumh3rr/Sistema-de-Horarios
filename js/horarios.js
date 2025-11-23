@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadGruposSelect();
     loadAulasSelect();
     loadHorarios();
-    loadSchedule();
 
     // Filtros
     const filterCarrera = document.getElementById('filterCarrera');
@@ -108,7 +107,7 @@ async function loadHorarios() {
     const grupo = document.getElementById('filterGrupo')?.value || '';
 
     try {
-        const response = await fetch(`../../php/horarios_api.php?action=list&grupo=${grupo}`);
+        const response = await fetch(`../php/horarios_api.php?action=list&grupo=${grupo}`);
         const data = await response.json();
 
         if (data.success) {
@@ -158,11 +157,19 @@ async function loadSchedule() {
     const grupo = document.getElementById('filterGrupo')?.value || '';
 
     try {
-        const response = await fetch(`../../php/horarios_api.php?action=schedule&grupo=${grupo}`);
+        console.log('Cargando horario para el grupo:', grupo);
+        const response = await fetch(`../php/horarios_api.php?action=schedule&grupo=${grupo}`);
         const data = await response.json();
 
         if (data.success) {
-            renderSchedule(data.data);
+            const horarios = data.data.map(h => {
+                return {
+                    ...h,
+                    hora_inicio: (h.hora_inicio || '').slice(0,5),
+                    hora_fin: (h.hora_fin || '').slice(0,5)
+                };
+            });
+            renderSchedule(horarios);
         }
     } catch (error) {
         console.error('Error:', error);

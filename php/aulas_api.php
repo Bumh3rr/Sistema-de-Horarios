@@ -12,10 +12,8 @@ switch ($action) {
         break;
     case 'create':
     case 'update':
-    case 'delete':
         if ($action === 'create') createAula();
         if ($action === 'update') updateAula();
-        if ($action === 'delete') deleteAula();
         break;
     default:
         jsonResponse(false, 'Acción no válida');
@@ -23,8 +21,20 @@ switch ($action) {
 
 function listAulas() {
     global $conn;
-    
-    $sql = "SELECT * FROM aulas WHERE activo = 1 ORDER BY edificio, nombre";
+
+    $tipo = cleanInput($_GET['tipo'] ?? '');
+    $search = cleanInput($_GET['search'] ?? '');
+    $sql = "SELECT * FROM aulas WHERE 1=1";
+
+    if (!empty($tipo)) {
+        $sql .= " AND tipo = '" . $conn->real_escape_string($tipo) . "'";
+    }
+    if (!empty($search)) {
+        $searchEscaped = $conn->real_escape_string($search);
+        $sql .= " AND (nombre LIKE '%$searchEscaped%' OR edificio LIKE '%$searchEscaped%')";
+    }
+    $sql .= " ORDER BY edificio, nombre";
+
     $result = $conn->query($sql);
     $aulas = [];
     
@@ -65,15 +75,14 @@ function createAula() {
     $edificio = cleanInput($_POST['edificio'] ?? '');
     $capacidad = cleanInput($_POST['capacidad'] ?? '');
     $tipo = cleanInput($_POST['tipo'] ?? 'teorica');
-    $recursos = cleanInput($_POST['recursos'] ?? '');
-    
+
     if (empty($nombre) || empty($edificio) || empty($capacidad)) {
         jsonResponse(false, 'Todos los campos obligatorios deben ser completados');
     }
     
-    $sql = "INSERT INTO aulas (nombre, edificio, capacidad, tipo, recursos) VALUES (?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO aulas (nombre, edificio, capacidad, tipo) VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssiss", $nombre, $edificio, $capacidad, $tipo, $recursos);
+    $stmt->bind_param("ssis", $nombre, $edificio, $capacidad, $tipo);
     
     if ($stmt->execute()) {
         jsonResponse(true, 'Aula creada exitosamente');
@@ -90,15 +99,15 @@ function updateAula() {
     $edificio = cleanInput($_POST['edificio'] ?? '');
     $capacidad = cleanInput($_POST['capacidad'] ?? '');
     $tipo = cleanInput($_POST['tipo'] ?? 'teorica');
-    $recursos = cleanInput($_POST['recursos'] ?? '');
-    
+    $active = cleanInput($_POST['activo'] ?? '0');
+
     if (empty($id) || empty($nombre) || empty($edificio) || empty($capacidad)) {
         jsonResponse(false, 'Todos los campos obligatorios deben ser completados');
     }
     
-    $sql = "UPDATE aulas SET nombre = ?, edificio = ?, capacidad = ?, tipo = ?, recursos = ? WHERE id = ?";
+    $sql = "UPDATE aulas SET nombre = ?, edificio = ?, capacidad = ?, tipo = ?, activo = ? WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssissi", $nombre, $edificio, $capacidad, $tipo, $recursos, $id);
+    $stmt->bind_param("ssisii", $nombre, $edificio, $capacidad, $tipo, $active, $id);
     
     if ($stmt->execute()) {
         jsonResponse(true, 'Aula actualizada exitosamente');
@@ -107,23 +116,4 @@ function updateAula() {
     }
 }
 
-function deleteAula() {
-    global $conn;
-    
-    $id = cleanInput($_POST['id'] ?? '');
-    
-    if (empty($id)) {
-        jsonResponse(false, 'ID no proporcionado');
-    }
-    
-    $sql = "DELETE FROM aulas WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    
-    if ($stmt->execute()) {
-        jsonResponse(true, 'Aula eliminada exitosamente');
-    } else {
-        jsonResponse(false, 'Error al eliminar el aula');
-    }
-}
 ?>

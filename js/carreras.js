@@ -1,7 +1,9 @@
 import {showLoading, notyf} from './notify/Config.js';
+import {ModalManager} from './utils/ModalManager.js';
 
+const modalManager = new ModalManager();
 // Gestión de Carreras
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     loadCarreras();
 
     // Formulario de carrera
@@ -16,9 +18,11 @@ async function loadCarreras() {
     const tbody = document.getElementById('carrerasTableBody');
 
     try {
+        showLoading(true);
         const response = await fetch('../php/carreras_api.php?action=list');
         const data = await response.json();
 
+        showLoading(false);
         if (data.success) {
             renderCarreras(data.data);
         } else {
@@ -27,6 +31,8 @@ async function loadCarreras() {
     } catch (error) {
         console.error('Error:', error);
         tbody.innerHTML = '<tr><td colspan="5" class="text-center">Error al cargar carreras</td></tr>';
+    } finally {
+        showLoading(false);
     }
 }
 
@@ -65,6 +71,7 @@ function renderCarreras(carreras) {
     `).join('');
 }
 
+
 // Manejar envío de formulario
 async function handleSubmitCarrera(e) {
     e.preventDefault();
@@ -91,6 +98,18 @@ async function handleSubmitCarrera(e) {
 
     formData.set('action', action);
 
+    modalManager.openInfo(
+        'Confirmar Acción',
+        `¿Estás seguro de que deseas ${action === 'create' ? 'crear' : 'actualizar'} esta carrera?`,
+        async () => {
+            await submitCarreraForm(formData, form);
+            modalManager.closeModal(ModalManager.ModalType.INFO);
+        }
+    )
+}
+
+// Enviar formulario de carrera
+async function submitCarreraForm(formData, form) {
     try {
         showLoading(true);
         const response = await fetch('../php/carreras_api.php', {
@@ -105,16 +124,55 @@ async function handleSubmitCarrera(e) {
             closeModal('modalCarrera');
             await loadCarreras();
             form.reset();
+
+            modalManager.openSuccess(
+                'Operación Exitosa',
+                `La carrera ha sido ${formData.get('action') === 'create' ? 'creada' : 'actualizada'} exitosamente.`,
+                () => {
+                    loadCarreras();
+                    modalManager.closeModalPop();
+                });
+
         } else {
             notyf.error(data.message);
         }
     } catch (error) {
         console.error('Error:', error);
         notyf.error('Error al guardar la carrera');
-    }finally {
+    } finally {
         showLoading(false);
     }
 }
+
+// Confirmar eliminación de carrera
+async function confirmDeleteCarrera(id) {
+    try {
+        showLoading(true);
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('id', id);
+
+        const response = await fetch('../php/carreras_api.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        showLoading(false);
+        if (data.success) {
+            notyf.success(data.message);
+            await loadCarreras();
+        } else {
+            notyf.error(data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        notyf.error('Error al eliminar la carrera');
+    } finally {
+        showLoading(false);
+    }
+}
+
 
 // Editar carrera
 window.editCarrera = async (id) => {
@@ -141,39 +199,19 @@ window.editCarrera = async (id) => {
     } catch (error) {
         console.error('Error:', error);
         showAlert('Error al cargar la carrera', 'error');
-    }finally {
+    } finally {
         showLoading(false);
     }
 }
+
 // Eliminar carrera
-window.deleteCarrera = async (id) =>  {
-    if (!confirmDelete('¿Estás seguro de que deseas eliminar esta carrera? Esta acción eliminará también todas las materias asociadas.')) {
-        return;
-    }
-
-    try {
-        showLoading(true);
-        const formData = new FormData();
-        formData.append('action', 'delete');
-        formData.append('id', id);
-
-        const response = await fetch('../php/carreras_api.php', {
-            method: 'POST',
-            body: formData
+window.deleteCarrera = async (id) => {
+    modalManager.openWarning(
+        'Eliminar Carrera',
+        '¿Estás seguro de que deseas eliminar esta carrera? Esta acción no se puede deshacer.',
+        async () => {
+            await confirmDeleteCarrera(id);
+            modalManager.closeModalPop();
         });
+};
 
-        const data = await response.json();
-        showLoading(false);
-        if (data.success) {
-            notyf.success(data.message);
-            await loadCarreras();
-        } else {
-            notyf.error(data.message);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        notyf.error('Error al eliminar la carrera');
-    }finally {
-        showLoading(false);
-    }
-}

@@ -25,28 +25,66 @@ async function logout() {
 // Funciones para modales
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) {
+    if (!modal) return;
+
+    modal.classList.remove('closing');
+
+    // Si ya está activo, no hacer nada
+    if (modal.classList.contains('active')) return;
+
+    // Hacer visible inmediatamente para que el navegador pueda calcular estilos iniciales
+    modal.style.display = 'flex';
+
+    // Forzar reflow / esperar al siguiente frame antes de agregar la clase active
+    requestAnimationFrame(() => {
+        // pequeña garantía de repaint
+        void modal.offsetWidth;
         modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
+    });
 }
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = 'auto';
+    if (!modal) return;
 
-        // Limpiar formulario si existe
-        const form = modal.querySelector('form');
-        if (form) {
-            form.reset();
-            // Limpiar campos ocultos
-            const hiddenInputs = form.querySelectorAll('input[type="hidden"]');
-            hiddenInputs.forEach(input => input.value = '');
+    // Agrega clase closing para animar
+    modal.classList.add('closing');
+
+    const content = modal.querySelector('.modal-content');
+    if (!content) {
+        // Si no hay contenido, limpiar inmediatamente
+        modal.classList.remove('active', 'closing');
+        modal.style.display = '';
+        return;
+    }
+
+    const onEnd = (e) => {
+        if (e.target !== content) return;
+        content.removeEventListener('transitionend', onEnd);
+        modal.classList.remove('active');
+        modal.classList.remove('closing');
+        modal.style.display = '';
+    };
+    content.addEventListener('transitionend', onEnd);
+
+    // Fallback por si no llega el evento transitionend
+    setTimeout(() => {
+        if (modal.classList.contains('closing')) {
+            content.removeEventListener('transitionend', onEnd);
+            modal.classList.remove('active', 'closing');
+            modal.style.display = '';
         }
+    }, 400);
+
+    // Limpiar formulario si existe
+    const form = modal.querySelector('form');
+    if (form) {
+        form.reset();
+        const hiddenInputs = form.querySelectorAll('input[type="hidden"]');
+        hiddenInputs.forEach(input => input.value = '');
     }
 }
+
 
 // Cerrar modal al hacer clic fuera
 document.addEventListener('click', function(e) {

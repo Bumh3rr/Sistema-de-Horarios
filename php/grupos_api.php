@@ -23,24 +23,27 @@ switch ($action) {
 
 function listGrupos() {
     global $conn;
-    
+
     $sql = "SELECT g.*, 
             m.nombre as materia_nombre,
-            CONCAT(u.nombre, ' ', u.apellido) as profesor_nombre,
+            COALESCE(CONCAT_WS(' ', u.nombre, u.apellido), '') as profesor_nombre,
             g.alumnos_inscriptos as num_estudiantes
             FROM grupos g
             JOIN materias m ON g.materia_id = m.id
-            JOIN docente u ON g.profesor_id = u.id
+            LEFT JOIN docente u ON g.profesor_id = u.id
             WHERE g.activo = 1
             ORDER BY g.periodo_academico DESC, m.nombre";
-    
+
     $result = $conn->query($sql);
+    if (!$result) {
+        jsonResponse(false, 'Error en la consulta de grupos');
+    }
     $grupos = [];
-    
+
     while ($row = $result->fetch_assoc()) {
         $grupos[] = $row;
     }
-    
+
     jsonResponse(true, 'Grupos obtenidos exitosamente', $grupos);
 }
 

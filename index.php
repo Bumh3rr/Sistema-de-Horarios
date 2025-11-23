@@ -28,7 +28,7 @@
     </div>
     <h4 class="title">Sistema de Horarios</h4>
     <p class="description">Ingresa tus datos para continuar</p>
-
+    
     <form id="loginForm">
         <div>
             <label for="email">Correo</label>
