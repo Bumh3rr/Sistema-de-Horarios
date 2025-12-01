@@ -1,21 +1,50 @@
 <?php
 $current_page = basename($_SERVER['PHP_SELF'], '.php');
 
-// Menú para admin (único rol)
-$menu = [
-        'principal' => [
-                ['name' => 'Dashboard', 'page' => 'dashboard', 'icon' => 'home'],
-                ['name' => 'Horarios', 'page' => 'horarios', 'icon' => 'calendar'],
-        ],
-        'gestión' => [
-                ['name' => 'Docentes', 'page' => 'docentes', 'icon' => 'user'],
-                ['name' => 'Carreras', 'page' => 'carreras', 'icon' => 'briefcase'],
-                ['name' => 'Materias', 'page' => 'materias', 'icon' => 'book'],
-                ['name' => 'Alumnos', 'page' => 'alumnos', 'icon' => 'users'],
-                ['name' => 'Grupos', 'page' => 'grupos', 'icon' => 'users'],
-                ['name' => 'Aulas', 'page' => 'aulas', 'icon' => 'building'],
-        ]
-];
+// Menú
+$menu = [];
+
+$value = $_SESSION['role'] ?? '';
+if ($value === '') {
+    header('Location: ../index.php');
+    exit;
+}
+
+if ($value === 'sub_director') {
+    $menu = [
+            'principal' => [
+                    ['name' => 'Dashboard', 'page' => 'dashboard', 'icon' => 'home'],
+                    ['name' => 'Horarios', 'page' => 'horarios', 'icon' => 'calendar'],
+            ],
+            'gestión' => [
+                    ['name' => 'Carreras', 'page' => 'carreras', 'icon' => 'briefcase'],
+                    ['name' => 'Materias', 'page' => 'materias', 'icon' => 'book'],
+                    ['name' => 'Docentes', 'page' => 'docentes', 'icon' => 'user'],
+                    ['name' => 'Alumnos', 'page' => 'alumnos', 'icon' => 'users'],
+                    ['name' => 'Grupos', 'page' => 'grupos', 'icon' => 'users'],
+                    ['name' => 'Aulas', 'page' => 'aulas', 'icon' => 'building'],
+            ]
+    ];
+} else if ($value === 'jefe_departamento') {
+    $menu = [
+            'principal' => [
+                    ['name' => 'Dashboard', 'page' => 'dashboard', 'icon' => 'home'],
+                    ['name' => 'Horarios', 'page' => 'horarios', 'icon' => 'calendar'],
+            ],
+            'gestión' => [
+                    ['name' => 'Materias', 'page' => 'materias', 'icon' => 'book'],
+                    ['name' => 'Generar Grupos', 'page' => 'alumnos', 'icon' => 'generate'],
+                    ['name' => 'Grupos', 'page' => 'grupos', 'icon' => 'users'],
+                    ['name' => 'Aulas', 'page' => 'aulas', 'icon' => 'building'],
+            ]
+    ];
+} else if ($value === 'docente') {
+    $menu = [
+            'gestión' => [
+                    ['name' => 'Docentes', 'page' => 'docentes', 'icon' => 'user']
+            ]
+    ];
+}
 
 // SVG Icons
 $icons = [
@@ -26,6 +55,7 @@ $icons = [
         'book' => '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>',
         'briefcase' => '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>',
         'building' => '<rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path>',
+        'generate' => '<path d="M12 20h9"></path><path d="M12 4h9"></path><path d="M4 9l4-4-4-4"></path><path d="M4 15l4 4-4 4"></path>',
 ];
 ?>
 <aside class="sidebar">
@@ -49,8 +79,10 @@ $icons = [
             <div class="nav-section">
                 <div class="nav-section-title"><?php echo ucfirst($section); ?></div>
                 <?php foreach ($items as $item): ?>
-                    <a href="<?php echo $item['page']; ?>.php" class="nav-link <?php echo $current_page === $item['page'] ? 'active' : ''; ?>">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <a href="<?php echo $item['page']; ?>.php"
+                       class="nav-link <?php echo $current_page === $item['page'] ? 'active' : ''; ?>">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
                             <?php echo $icons[$item['icon']]; ?>
                         </svg>
                         <span><?php echo $item['name']; ?></span>
@@ -62,9 +94,37 @@ $icons = [
 
     <div class="sidebar-footer">
         <div class="user-profile">
-            <div class="user-avatar">A</div>
+            <div class="user-avatar">
+                <?php
+                // Mostrar avatar basado en el rol
+                $role = $_SESSION['role'] ?? '';
+                if ($role === 'sub_director') {
+                    echo 'Sub';
+                } elseif ($role === 'jefe_departamento') {
+                    echo 'Jd';
+                } elseif ($role === 'docente') {
+                    echo 'D';
+                } else {
+                    echo 'U';
+                }
+                ?>
+            </div>
             <div class="user-info">
-                <span class="user-name">Admin Sistema</span>
+                <span class="user-name">
+                    <?php
+                    // Mostrar el nombre del usuario basado en su rol
+                    $role = $_SESSION['role'] ?? '';
+                    if ($role === 'sub_director') {
+                        echo 'Sub Director';
+                    } elseif ($role === 'jefe_departamento') {
+                        echo 'Jefe de Departamento';
+                    } elseif ($role === 'docente') {
+                        echo 'Docente';
+                    } else {
+                        echo 'Usuario';
+                    }
+                    ?>
+                </span>
             </div>
             <button class="btn-logout" onclick="logout()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

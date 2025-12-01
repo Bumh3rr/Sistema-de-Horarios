@@ -103,7 +103,6 @@ function renderMaterias(materias) {
             <td>${materia.carrera_nombre}</td>
             <td>${materia.semestre}° Sem</td>
             <td>${materia.creditos}</td>
-            <td>${materia.horas_semanales} hrs</td>
             <td>
                 <div class="flex gap-1">
                     <button class="btn btn-sm btn-secondary" onclick="editMateria(${materia.id})" title="Editar">
@@ -135,21 +134,9 @@ async function handleSubmitMateria(e) {
 
     // Validaciones
     const semestre = parseInt(formData.get('semestre'));
-    const creditos = parseInt(formData.get('creditos'));
-    const horas = parseInt(formData.get('horas_semanales'));
 
     if (semestre < 1 || semestre > 12) {
         notyf.error('El semestre debe estar entre 1 y 12');
-        return;
-    }
-
-    if (creditos < 1 || creditos > 6) {
-        notyf.error('Los créditos deben estar entre 1 y 7');
-        return;
-    }
-
-    if (horas < 1 || horas > 40) {
-        notyf.error('Las horas semanales deben estar entre 1 y 7');
         return;
     }
 
@@ -217,7 +204,6 @@ window.editMateria = async (id) => {
             document.getElementById('carrera_id').value = materia.carrera_id;
             document.getElementById('semestre').value = materia.semestre;
             document.getElementById('creditos').value = materia.creditos;
-            document.getElementById('horas_semanales').value = materia.horas_semanales;
             document.getElementById('descripcion').value = materia.descripcion || '';
 
             document.getElementById('modalMateriaTitle').textContent = 'Editar Materia';

@@ -27,7 +27,8 @@ switch ($action) {
         jsonResponse(false, 'Acción no válida');
 }
 
-function listDocentes() {
+function listDocentes()
+{
     global $conn;
 
     $search = cleanInput($_GET['search'] ?? '');
@@ -56,7 +57,8 @@ function listDocentes() {
     jsonResponse(true, 'Docentes obtenidos exitosamente', $docentes);
 }
 
-function getDocente() {
+function getDocente()
+{
     global $conn;
 
     $id = cleanInput($_GET['id'] ?? '');
@@ -65,7 +67,7 @@ function getDocente() {
         jsonResponse(false, 'ID no proporcionado');
     }
 
-    $sql = "SELECT id, nombre, apellido, email, telefono, rfc, activo FROM docente WHERE id = ?";
+    $sql = "SELECT id, nombre, apellido, email, password, telefono, rfc, activo FROM docente WHERE id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -74,12 +76,25 @@ function getDocente() {
     if ($result->num_rows === 0) {
         jsonResponse(false, 'Docente no encontrado');
     }
-
     $docente = $result->fetch_assoc();
+
+    // Obtener materias asignadas
+    $sql2 = "SELECT materia_id FROM docente_materias WHERE docente_id = ?";
+    $stmt2 = $conn->prepare($sql2);
+    $stmt2->bind_param("i", $id);
+    $stmt2->execute();
+    $res2 = $stmt2->get_result();
+
+    $materias = [];
+    while ($row = $res2->fetch_assoc()) {
+        $materias[] = $row['materia_id'];
+    }
+    $docente['materias'] = $materias;
     jsonResponse(true, 'Docente obtenido exitosamente', $docente);
 }
 
-function getHorarioDocente() {
+function getHorarioDocente()
+{
     global $conn;
 
     $id = cleanInput($_GET['id'] ?? '');
@@ -115,30 +130,33 @@ function getHorarioDocente() {
     jsonResponse(true, 'Horario obtenido exitosamente', $horarios);
 }
 
-function createDocente() {
+function createDocente()
+{
     global $conn;
 
     $nombre = cleanInput($_POST['nombre'] ?? '');
     $apellido = cleanInput($_POST['apellido'] ?? '');
     $email = cleanInput($_POST['email'] ?? '');
+    $password = cleanInput($_POST['password'] ?? '');
     $telefono = cleanInput($_POST['telefono'] ?? '');
     $rfc = cleanInput($_POST['rfc'] ?? '');
     $activo = cleanInput($_POST['activo'] ?? '1');
 
     // Validaciones
-    if (empty($nombre) || empty($apellido) || empty($email)) {
+    if (empty($nombre) || empty($apellido) || empty($email) || empty($password)) {
         jsonResponse(false, 'Todos los campos obligatorios deben ser completados');
     }
-
+    if (strlen($password) < 6) {
+        jsonResponse(false, 'La contraseña debe tener al menos 6 caracteres');
+    }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         jsonResponse(false, 'El formato del email no es válido');
     }
-
     if (!empty($rfc) && strlen($rfc) !== 13) {
         jsonResponse(false, 'El RFC debe tener 13 caracteres');
     }
 
-    // Verificar si el email ya existe
+    // Verificaciones de email / rfc (igual que antes)...
     $sql = "SELECT id FROM docente WHERE email = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $email);
@@ -146,8 +164,6 @@ function createDocente() {
     if ($stmt->get_result()->num_rows > 0) {
         jsonResponse(false, 'El email ya está registrado');
     }
-
-    // Verificar si el RFC ya existe
     if (!empty($rfc)) {
         $sql = "SELECT id FROM docente WHERE rfc = ?";
         $stmt = $conn->prepare($sql);
@@ -159,32 +175,58 @@ function createDocente() {
     }
 
     // Insertar docente
-    $sql = "INSERT INTO docente (nombre, apellido, email, telefono, rfc, activo) 
-            VALUES (?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sssssi", $nombre, $apellido, $email, $telefono, $rfc, $activo);
+    $conn->begin_transaction();
+    try {
+        $sql = "INSERT INTO docente (nombre, apellido, email, password, telefono, rfc, activo) 
+                VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssssssi", $nombre, $apellido, $email, $password, $telefono, $rfc, $activo);
+        if (!$stmt->execute()) {
+            throw new Exception('Error al crear el docente');
+        }
 
-    if ($stmt->execute()) {
+        $docenteId = $conn->insert_id;
+
+        // Insertar materias si se enviaron
+        if (!empty($_POST['materias']) && is_array($_POST['materias'])) {
+            $sqlIns = "INSERT IGNORE INTO docente_materias (docente_id, materia_id) VALUES (?, ?)";
+            $stmtIns = $conn->prepare($sqlIns);
+            foreach ($_POST['materias'] as $m) {
+                $mId = intval($m);
+                if ($mId <= 0) continue;
+                $stmtIns->bind_param("ii", $docenteId, $mId);
+                $stmtIns->execute();
+            }
+        }
+        $conn->commit();
         jsonResponse(true, 'Docente creado exitosamente');
-    } else {
-        jsonResponse(false, 'Error al crear el docente');
+    } catch (Exception $e) {
+        $conn->rollback();
+        jsonResponse(false, $e->getMessage());
     }
 }
 
-function updateDocente() {
+function updateDocente()
+{
     global $conn;
 
     $id = cleanInput($_POST['docente_id'] ?? '');
     $nombre = cleanInput($_POST['nombre'] ?? '');
     $apellido = cleanInput($_POST['apellido'] ?? '');
     $email = cleanInput($_POST['email'] ?? '');
+    $password = cleanInput($_POST['password'] ?? '');
     $telefono = cleanInput($_POST['telefono'] ?? '');
     $rfc = cleanInput($_POST['rfc'] ?? '');
     $activo = cleanInput($_POST['activo'] ?? '1');
 
     // Validaciones
-    if (empty($id) || empty($nombre) || empty($apellido) || empty($email)) {
+    if (empty($id) || empty($nombre) || empty($apellido) || empty($email) || empty($password)) {
         jsonResponse(false, 'Todos los campos obligatorios deben ser completados');
+    }
+
+    // validar password (mínimo 6 caracteres)
+    if (strlen($password) < 6) {
+        jsonResponse(false, 'La contraseña debe tener al menos 6 caracteres');
     }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -215,19 +257,42 @@ function updateDocente() {
         }
     }
 
-    // Actualizar docente
-    $sql = "UPDATE docente SET nombre = ?, apellido = ?, email = ?, telefono = ?, rfc = ?, activo = ? WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sssssii", $nombre, $apellido, $email, $telefono, $rfc, $activo, $id);
+    // Iniciar transacción para actualizar docente y materias
+    $conn->begin_transaction();
+    try {
+        $sql = "UPDATE docente SET nombre = ?, apellido = ?, email = ?, password = ?, telefono = ?, rfc = ?, activo = ? WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssssssii", $nombre, $apellido, $email, $password, $telefono, $rfc, $activo, $id);
+        if (!$stmt->execute()) {
+            throw new Exception('Error al actualizar el docente');
+        }
 
-    if ($stmt->execute()) {
+        // Borrar asignaciones antiguas y agregar las nuevas (si llegan)
+        $sqlDel = "DELETE FROM docente_materias WHERE docente_id = ?";
+        $stmtDel = $conn->prepare($sqlDel);
+        $stmtDel->bind_param("i", $id);
+        $stmtDel->execute();
+        if (!empty($_POST['materias']) && is_array($_POST['materias'])) {
+            $sqlIns = "INSERT IGNORE INTO docente_materias (docente_id, materia_id) VALUES (?, ?)";
+            $stmtIns = $conn->prepare($sqlIns);
+            foreach ($_POST['materias'] as $m) {
+                $mId = intval($m);
+                if ($mId <= 0) continue;
+                $stmtIns->bind_param("ii", $id, $mId);
+                $stmtIns->execute();
+            }
+        }
+
+        $conn->commit();
         jsonResponse(true, 'Docente actualizado exitosamente');
-    } else {
-        jsonResponse(false, 'Error al actualizar el docente');
+    } catch (Exception $e) {
+        $conn->rollback();
+        jsonResponse(false, $e->getMessage());
     }
 }
 
-function deleteDocente() {
+function deleteDocente()
+{
     global $conn;
 
     $id = cleanInput($_POST['id'] ?? '');
@@ -254,4 +319,5 @@ function deleteDocente() {
         jsonResponse(false, 'Error al eliminar el docente');
     }
 }
+
 ?>

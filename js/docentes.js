@@ -1,7 +1,10 @@
 import {showLoading, notyf} from './notify/Config.js';
 import {ModalManager} from './utils/ModalManager.js';
+import AuthService from './services/AuthService.js';
+import {register} from './auth/Auth.js';
 
 const modalManager = new ModalManager();
+const authService = new AuthService();
 
 // Gestión de Docentes
 document.addEventListener('DOMContentLoaded', function () {
@@ -28,6 +31,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const formDocente = document.getElementById('formDocente');
     if (formDocente) {
         formDocente.addEventListener('submit', handleSubmitDocente);
+    }
+
+    // Botón de nuevo docente
+    const btnNew = document.getElementById('btnNewDocente');
+    if (btnNew) {
+        btnNew.addEventListener('click', () => {
+            // limpiar form antes de abrir
+            const form = document.getElementById('formDocente');
+            if (form) form.reset();
+            document.getElementById('docente_id').value = '';
+            document.getElementById('modalDocenteTitle').textContent = 'Nuevo Docente';
+            loadMaterias([]);
+        });
     }
 });
 
@@ -89,6 +105,46 @@ async function loadDocentes() {
     }
 }
 
+
+async function loadMaterias(selected = []) {
+    const container = document.getElementById('docenteMateriasContainer');
+    if (!container) return;
+    container.innerHTML = '<div class="text-muted">Cargando materias...</div>';
+
+    try {
+        showLoading(true);
+        const res = await fetch('../php/materias_api.php?action=list');
+        const data = await res.json();
+        showLoading(false);
+        if (!data.success) {
+            container.innerHTML = '<div class="text-danger">Error al cargar materias</div>';
+            return;
+        }
+        const materias = data.data;
+        if (materias.length === 0) {
+            container.innerHTML = '<div class="text-muted">No hay materias disponibles</div>';
+            return;
+        }
+
+        container.innerHTML = materias.map(m => {
+            const checked = selected.includes(m.id) ? 'checked' : '';
+            const palabrasIgnoradas = ['en', 'de', 'y', 'la', 'el', 'los', 'las'];
+            const iniciales = m.carrera_nombre.split(' ').filter(p => !palabrasIgnoradas.includes(p)).map(p => p.charAt(0).toUpperCase()).join('');
+            return `
+                <label style="display:block; padding:4px 0;">
+                    <input class="ui-checkbox" type="checkbox" name="materias[]" value="${m.id}" ${checked}> 
+                        ${m.nombre} - ${iniciales}
+                </label>
+            `;
+        }).join('');
+    } catch (err) {
+        notyf.error('Error al cargar materias');
+        container.innerHTML = '<div class="text-danger">Error al cargar materias</div>';
+    }finally {
+        showLoading(false);
+    }
+}
+
 // Renderizar docentes en tabla
 function renderDocentes(docentes) {
     const tbody = document.getElementById('docentesTableBody');
@@ -146,6 +202,7 @@ async function handleSubmitDocente(e) {
     const formData = new FormData(form);
     const docente_id = formData.get('docente_id');
     const action = docente_id ? 'update' : 'create';
+    appendSelectedMateriasToFormData(formData);
 
 
     // Validaciones
@@ -198,8 +255,23 @@ async function submitDocenteForm(formData, form, action) {
         });
 
         const data = await response.json();
-
         if (data.success) {
+            if (action === 'create') {
+                const email = formData.get('email');
+                const password = formData.get('password');
+                const result  = await register(email, password);
+                const uid = result.user.uid;
+                const userData = {
+                    email: email,
+                    role: 'docente'
+                };
+                const authResult = await authService.registerUser(uid,userData);
+                if (!authResult.success) {
+                    notyf.error('Docente creado, pero error al guardar en el sistema de autenticación: ' + authResult.message);
+                    return;
+                }
+            }
+
             notyf.success(data.message);
             closeModal('modalDocente');
             form.reset();
@@ -211,8 +283,6 @@ async function submitDocenteForm(formData, form, action) {
                     loadDocentes();
                     modalManager.closeModalPop();
                 });
-
-
         } else {
             notyf.error(data.message);
         }
@@ -280,6 +350,13 @@ async function performDeleteDocente(id) {
     }
 }
 
+function appendSelectedMateriasToFormData(formData) {
+    // eliminar posibles entradas previas
+    try { formData.delete('materias[]'); } catch(e){}
+    const checked = document.querySelectorAll('#docenteMateriasContainer input[name="materias[]"]:checked');
+    checked.forEach(ch => formData.append('materias[]', ch.value));
+}
+
 // Eliminar docente
 window.deleteDocente = async (id) => {
     modalManager.openWarning('Confirmar Eliminación',
@@ -305,9 +382,14 @@ window.editDocente = async (id) => {
             document.getElementById('nombre').value = docente.nombre;
             document.getElementById('apellido').value = docente.apellido;
             document.getElementById('email').value = docente.email;
+            document.getElementById('password').value = docente.password;
             document.getElementById('rfc').value = docente.rfc || '';
             document.getElementById('telefono').value = docente.telefono || '';
-            document.getElementById('activo').checked = docente.activo == 1;
+            document.getElementById('activo').checked = docente.activo === 1;
+
+            // cargar materias y marcar las asignadas
+            const selected = docente.materias || [];
+            await loadMaterias(selected);
 
             document.getElementById('modalDocenteTitle').textContent = 'Editar Docente';
             openModal('modalDocente');

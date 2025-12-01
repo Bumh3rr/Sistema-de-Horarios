@@ -13,13 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function handleLogin() {
-    $email = cleanInput($_POST['email'] ?? '');
-    if ($email === '') {
-        jsonResponse(false, 'El correo electrónico es obligatorio');
+    $rol = cleanInput($_POST['rol'] ?? '');
+    $id = cleanInput($_POST['id'] ?? '');
+    if ($rol === '' || $id === '') {
+        jsonResponse(false, 'Faltan datos de inicio de sesión');
+        return;
     }
 
     // Se guardar el ID de usuario en la sesión
-    $_SESSION['user_id'] = $email; // Utilizo el correo como ID de usuario para este ejemplo
+    $_SESSION['user_id'] = $id;
+    $_SESSION['role'] = $rol;
 
     // Determinar redirección
     $redirect = 'pages/dashboard.php';

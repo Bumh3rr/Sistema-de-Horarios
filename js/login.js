@@ -1,5 +1,8 @@
 import {login} from './auth/Auth.js';
 import {notyf} from './notify/Config.js';
+import AuthRepository from '../js/services/AuthService.js';
+
+const authService = new AuthRepository();
 
 const showLoading = (isVisible) => {
     if (isVisible) {
@@ -29,9 +32,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (response.success) {
                 // Enviar POST con FormData para que auth.php reciba action y email correctamente
+                const user = await authService.getUserByEmail(email);
+
+                if(!user.success){
+                    notyf.error(user.message || 'Error al obtener datos del usuario');
+                    return;
+                }
+
                 const form = new FormData();
                 form.append('action', 'login');
-                form.append('email', email);
+                form.append('id', user.data.id);
+                form.append('rol', user.data.role);
 
                 const responseApi = await fetch('../php/auth.php', {
                     method: 'POST',

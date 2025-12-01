@@ -6,8 +6,8 @@
     <title>Document</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
     <link rel="stylesheet" href="css/login.css">
-
 </head>
+
 <body>
 
 <!-- Loading -->

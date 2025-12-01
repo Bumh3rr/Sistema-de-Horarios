@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS docente
     nombre         VARCHAR(100)        NOT NULL,
     apellido       VARCHAR(100)        NOT NULL,
     email          VARCHAR(150) UNIQUE NOT NULL,
+    password       VARCHAR(300) NOT NULL,
     telefono       VARCHAR(20),
     rfc            VARCHAR(13) UNIQUE,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -43,7 +44,6 @@ CREATE TABLE IF NOT EXISTS materias
     carrera_id      INT                NOT NULL,
     semestre        INT                NOT NULL,
     creditos        INT                NOT NULL,
-    horas_semanales INT                NOT NULL,
     descripcion     TEXT,
     activo          BOOLEAN   DEFAULT TRUE,
     alumnos_inscriptos      BOOLEAN   DEFAULT FALSE,
@@ -117,28 +117,40 @@ CREATE TABLE IF NOT EXISTS horarios
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;
 
+
+--  Tabla intermedia para asignar materias a docentes
+CREATE TABLE IF NOT EXISTS docente_materias
+(
+    id                 INT AUTO_INCREMENT PRIMARY KEY,
+    docente_id         INT NOT NULL,
+    materia_id         INT NOT NULL,
+    fecha_asignacion   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_docente_materia (docente_id, materia_id),
+    FOREIGN KEY (docente_id) REFERENCES docente (id) ON DELETE CASCADE,
+    FOREIGN KEY (materia_id) REFERENCES materias (id) ON DELETE CASCADE,
+    INDEX idx_dm_docente (docente_id),
+    INDEX idx_dm_materia (materia_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
+
 -- Insertar datos de ejemplo
 INSERT INTO carreras (nombre, codigo, descripcion, duracion_semestres)
 VALUES
-    ('Ingeniería en Sistemas Computacionales', 'ISC', 'Carrera enfocada en el desarrollo de software y sistemas', 9),
-    ('Ingeniería Civil', 'IC', 'Carrera de construcción e infraestructura', 10),
-    ('Licenciatura en Administración', 'LA', 'Carrera de gestión empresarial', 8),
-    ('Licenciatura en Contaduría', 'LC', 'Carrera de Contador Público', 10),
-    ('Ingeniería Informática', 'II', 'Carrera de Ingeniería en Informática', 10)
+    ('Ingeniería en Sistemas Computacionales', 'ISC', 'Carrera enfocada en el desarrollo de software y sistemas', 9);
+
+INSERT INTO docente (nombre, apellido, email, password, rfc, telefono)
+VALUES ('Juan', 'Pérez García', 'juan.perez@profesor.com','juan.perez@profesor.com', 'PEGJ850101ABC', '7471234567'),
+       ('María', 'López Hernández', 'maria.lopez@profesor.com', 'juan.perez@profesor.com', 'LOHM860202XYZ', '7471234568'),
+       ('Carlos', 'González Ruiz', 'carlos.gonzalez@docente.com', 'juan.perez@profesor.com', 'GORC870303DEF', '7471234569'),
+       ('Ana', 'Martínez Sánchez', 'ana.martinez@docente.com','juan.perez@profesor.com',  'MASA880404GHI', '7471234570')
 ;
 
-INSERT INTO docente (nombre, apellido, email, rfc, telefono)
-VALUES ('Juan', 'Pérez García', 'juan.perez@profesor.com', 'PEGJ850101ABC', '7471234567'),
-       ('María', 'López Hernández', 'maria.lopez@profesor.com', 'LOHM860202XYZ', '7471234568'),
-       ('Carlos', 'González Ruiz', 'carlos.gonzalez@docente.com', 'GORC870303DEF', '7471234569'),
-       ('Ana', 'Martínez Sánchez', 'ana.martinez@docente.com', 'MASA880404GHI', '7471234570')
-;
-
-INSERT INTO materias (nombre, codigo, carrera_id, semestre, creditos, horas_semanales, descripcion)
-VALUES ('Programación Orientada a Objetos', 'POO-101', 1, 3, 8, 6, 'Fundamentos de POO con Java'),
-       ('Bases de Datos', 'BD-201', 1, 4, 8, 6, 'Diseño y gestión de bases de datos'),
-       ('Estructuras de Datos', 'ED-102', 1, 3, 8, 6, 'Algoritmos y estructuras de datos'),
-       ('Desarrollo Web', 'DW-301', 1, 5, 6, 5, 'Desarrollo de aplicaciones web');
+INSERT INTO materias (nombre, codigo, carrera_id, semestre, creditos, descripcion)
+VALUES ('Programación Orientada a Objetos', 'POO-101', 1, 3, 5,  'Fundamentos de POO con Java'),
+       ('Bases de Datos', 'BD-201', 1, 4, 5,  'Diseño y gestión de bases de datos'),
+       ('Estructuras de Datos', 'ED-102', 1, 3, 4,  'Algoritmos y estructuras de datos'),
+       ('Desarrollo Web', 'DW-301', 1, 5, 5,  'Desarrollo de aplicaciones web');
 
 INSERT INTO aulas (nombre, edificio, capacidad, tipo)
 VALUES ('R1-01', 'R1', 30, 'computacion'),
@@ -181,5 +193,16 @@ VALUES (1, 1, 'Lunes', '07:00:00', '09:00:00'),
        (3, 3, 'Lunes', '11:00:00', '13:00:00');
 
 
+INSERT INTO docente_materias (docente_id, materia_id)
+VALUES (1, 1),
+       (1, 4),
+       (2, 2),
+       (3, 3),
+       (4, 4)
+ON DUPLICATE KEY UPDATE fecha_asignacion = VALUES(fecha_asignacion);
+
+
 select * from grupos;
 select * from materias;
+select * from docente_materias;
+select * from docente;

@@ -121,10 +121,9 @@ function createMateria() {
     $carrera_id = cleanInput($_POST['carrera_id'] ?? '');
     $semestre = cleanInput($_POST['semestre'] ?? '');
     $creditos = cleanInput($_POST['creditos'] ?? '');
-    $horas_semanales = cleanInput($_POST['horas_semanales'] ?? '');
     $descripcion = cleanInput($_POST['descripcion'] ?? '');
     
-    if (empty($nombre) || empty($codigo) || empty($carrera_id) || empty($semestre) || empty($creditos) || empty($horas_semanales)) {
+    if (empty($nombre) || empty($codigo) || empty($carrera_id) || empty($semestre) || empty($creditos)) {
         jsonResponse(false, 'Todos los campos obligatorios deben ser completados');
     }
     
@@ -137,10 +136,10 @@ function createMateria() {
         jsonResponse(false, 'El código ya está registrado');
     }
     
-    $sql = "INSERT INTO materias (nombre, codigo, carrera_id, semestre, creditos, horas_semanales, descripcion) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO materias (nombre, codigo, carrera_id, semestre, creditos, descripcion) 
+            VALUES (?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssiiiis", $nombre, $codigo, $carrera_id, $semestre, $creditos, $horas_semanales, $descripcion);
+    $stmt->bind_param("ssiiis", $nombre, $codigo, $carrera_id, $semestre, $creditos, $descripcion);
     
     if ($stmt->execute()) {
         jsonResponse(true, 'Materia creada exitosamente');

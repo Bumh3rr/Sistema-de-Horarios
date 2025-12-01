@@ -79,7 +79,6 @@ requireLogin();
                                 <th>Carrera</th>
                                 <th>Semestre</th>
                                 <th>Créditos</th>
-                                <th>Horas/Semana</th>
                                 <th>Acciones</th>
                             </tr>
                             </thead>
@@ -130,18 +129,19 @@ requireLogin();
                     <input type="text" id="nombre" name="nombre" class="form-input" placeholder="Ej: Programación Orientada a Objetos" required>
                 </div>
 
-                <div class="grid grid-3">
+                <div class="grid grid-2">
                     <div class="form-group">
                         <label class="form-label">Semestre</label>
                         <input type="number" id="semestre" name="semestre" class="form-input" min="1" max="12" placeholder="Ej: 3" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Créditos</label>
-                        <input type="number" id="creditos" name="creditos" class="form-input" min="1" max="20" placeholder="Ej: 8" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Horas/Semana</label>
-                        <input type="number" id="horas_semanales" name="horas_semanales" class="form-input" min="1" max="40" placeholder="Ej: 6" required>
+                        <select id="creditos" name="creditos" class="form-input" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+
                     </div>
                 </div>
 
