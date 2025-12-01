@@ -7,8 +7,8 @@ USE railway;
 CREATE TABLE IF NOT EXISTS docente
 (
     id             INT AUTO_INCREMENT PRIMARY KEY,
-    nombre         VARCHAR(100)        NOT NULL,
-    apellido       VARCHAR(100)        NOT NULL,
+    nombre         VARCHAR(150)        NOT NULL,
+    apellido       VARCHAR(150)        NOT NULL,
     email          VARCHAR(150) UNIQUE NOT NULL,
     password       VARCHAR(300) NOT NULL,
     telefono       VARCHAR(20),

@@ -199,7 +199,6 @@ requireLogin();
                 <div class="schedule-header">Miércoles</div>
                 <div class="schedule-header">Jueves</div>
                 <div class="schedule-header">Viernes</div>
-                <div class="schedule-header">Sábado</div>
 
                 <!-- Horarios de 7:00 AM a 3:00 PM (8 bloques) -->
             </div>

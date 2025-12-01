@@ -178,7 +178,7 @@ function createDocente()
     $conn->begin_transaction();
     try {
         $sql = "INSERT INTO docente (nombre, apellido, email, password, telefono, rfc, activo) 
-                VALUES (?, ?, ?, ?, ?, ?)";
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("ssssssi", $nombre, $apellido, $email, $password, $telefono, $rfc, $activo);
         if (!$stmt->execute()) {
