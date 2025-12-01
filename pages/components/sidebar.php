@@ -20,7 +20,7 @@ if ($value === 'sub_director') {
                     ['name' => 'Carreras', 'page' => 'carreras', 'icon' => 'briefcase'],
                     ['name' => 'Materias', 'page' => 'materias', 'icon' => 'book'],
                     ['name' => 'Docentes', 'page' => 'docentes', 'icon' => 'user'],
-                    ['name' => 'Alumnos', 'page' => 'alumnos', 'icon' => 'users'],
+                    ['name' => 'Generar Grupos', 'page' => 'alumnos', 'icon' => 'generate'],
                     ['name' => 'Grupos', 'page' => 'grupos', 'icon' => 'users'],
                     ['name' => 'Aulas', 'page' => 'aulas', 'icon' => 'building'],
             ]

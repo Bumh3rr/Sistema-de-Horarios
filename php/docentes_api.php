@@ -33,6 +33,7 @@ function listDocentes()
 
     $search = cleanInput($_GET['search'] ?? '');
     $activo = cleanInput($_GET['activo'] ?? '');
+    $materia_id = cleanInput($_GET['materia_id'] ?? '');
 
     $sql = "SELECT id, nombre, apellido, email, telefono, rfc, activo, fecha_registro 
             FROM docente WHERE 1=1";
@@ -45,11 +46,22 @@ function listDocentes()
         $sql .= " AND activo = '$activo'";
     }
 
+    if ($materia_id !== '') {
+        $mid = intval($materia_id);
+        if ($mid > 0) {
+            // Filtrar docentes que están asignados a la materia indicada
+            $sql .= " AND id IN (SELECT docente_id FROM docente_materias WHERE materia_id = $mid)";
+        }
+    }
+
     $sql .= " ORDER BY fecha_registro DESC";
 
     $result = $conn->query($sql);
-    $docentes = [];
+    if (!$result) {
+        jsonResponse(false, 'Error en la consulta de docentes');
+    }
 
+    $docentes = [];
     while ($row = $result->fetch_assoc()) {
         $docentes[] = $row;
     }

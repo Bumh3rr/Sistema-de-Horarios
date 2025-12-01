@@ -24,7 +24,7 @@ requireLogin();
 
     <div class="main-content">
         <div class="topbar">
-            <h1 class="topbar-title">Registro de Alumnos</h1>
+            <h1 class="topbar-title">Generar Grupos</h1>
         </div>
 
         <div class="content-wrapper">
@@ -70,7 +70,6 @@ requireLogin();
                                 <th>Carrera</th>
                                 <th>Semestre</th>
                                 <th>Créditos</th>
-                                <th>Horas/Semana</th>
                                 <th>Alumnos Inscriptos</th>
                                 <th>Acciones</th>
                             </tr>
@@ -102,7 +101,7 @@ requireLogin();
                         </g>
                     </svg>
                 </div>
-                <h3 class="modal-title" id="modalMateriaTitle">Agregar Alumnos</h3>
+                <h3 class="modal-title" id="modalMateriaTitle">Generar Grupos</h3>
             </div>
             <button class="modal-close" onclick="closeModal('modalAgregarAlumnos')">&times;</button>
         </div>
@@ -113,7 +112,7 @@ requireLogin();
                 <div class="form-group">
                     <label for="numero_alumnos" class="form-label">Numero de Alumnos</label>
                     <input type="number" id="numero_alumnos" name="numero_alumnos" class="form-input"
-                           placeholder="Ej: 26" max="200" min="7" required>
+                           placeholder="Ej: 130" max="200" min="7" required>
                 </div>
 
                 <!-- Agregar un Sub-Titulo -->

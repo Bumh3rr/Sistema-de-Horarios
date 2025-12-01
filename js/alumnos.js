@@ -79,17 +79,16 @@ function renderMaterias(materias) {
             <td>${materia.carrera_nombre}</td>
             <td>${materia.semestre}° Sem</td>
             <td>${materia.creditos}</td>
-            <td>${materia.horas_semanales} hrs</td>
             <td>
                 <span class="badge badge-${materia.alumnos_inscriptos == 1 ? 'success' : 'error'}">
-                    ${materia.alumnos_inscriptos == 1 ? 'Alumnos Inscriptos' : 'No hay Alumnos Inscriptos'}
+                    ${materia.alumnos_inscriptos == 1 ? 'Grupos Generados' : 'No hay Grupos Generados'}
                 </span>
             </td>
             <td>
                 <button class="btn btn-primary" onclick="agregarAlumnos(${materia.id})" title="agregar"  ${materia.alumnos_inscriptos === 1 ? 'disabled' : ''}>
                     <div style="display: flex; flex-flow: row wrap; align-items: center; justify-content: center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M15 8A5 5 0 1 0 5 8a5 5 0 0 0 10 0m2.5 13v-7M14 17.5h7"/><path d="M3 20a7 7 0 0 1 11-5.745"/></g></svg>
-                            <p style="font-size: 11px;">Agregar Alumnos</p>
+                            <p style="font-size: 11px;">Generar Grupos</p>
                     </div>
                 </button>
             </td>

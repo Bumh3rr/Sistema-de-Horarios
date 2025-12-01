@@ -78,11 +78,17 @@ async function loadMateriasSelect() {
 
         if (data.success) {
             const select = document.getElementById('materia_id');
+            select.innerHTML = '<option value="">Seleccionar...</option>';
             data.data.forEach(materia => {
                 const option = document.createElement('option');
                 option.value = materia.id;
                 option.textContent = `${materia.nombre} (${materia.codigo})`;
                 select.appendChild(option);
+            });
+
+            // Cuando cambie la materia, recargar profesores filtrados
+            select.addEventListener('change', () => {
+                loadProfesoresSelect(select.value);
             });
         }
     } catch (error) {
@@ -90,13 +96,17 @@ async function loadMateriasSelect() {
     }
 }
 
-async function loadProfesoresSelect() {
+async function loadProfesoresSelect(materiaId = '') {
     try {
-        const response = await fetch('../php/docentes_api.php?action=list&activo=1');
+        const url = `../php/docentes_api.php?action=list&activo=1${materiaId ? `&materia_id=${materiaId}` : ''}`;
+        const response = await fetch(url);
         const data = await response.json();
 
+        const select = document.getElementById('profesor_id');
+        // reset opciones
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+
         if (data.success) {
-            const select = document.getElementById('profesor_id');
             data.data.forEach(profesor => {
                 const option = document.createElement('option');
                 option.value = profesor.id;
@@ -172,9 +182,15 @@ window.editGrupo = async (id) => {
 
             document.getElementById('grupo_id').value = grupo.id;
             document.getElementById('materia_id').value = grupo.materia_id;
+
+            // cargar profesores filtrados por la materia y luego asignar el profesor seleccionado
+            await loadProfesoresSelect(grupo.materia_id);
+            document.getElementById('profesor_id').value = grupo.profesor_id || '';
+
             document.getElementById('profesor_id').value = grupo.profesor_id;
             document.getElementById('nombre').value = grupo.nombre;
             document.getElementById('cupo_maximo').value = grupo.cupo_maximo;
+            document.getElementById('num_alumnos').value = grupo.alumnos_inscriptos;
             document.getElementById('semestre_actual').value = grupo.semestre_actual;
             document.getElementById('periodo_academico').value = grupo.periodo_academico;
 
