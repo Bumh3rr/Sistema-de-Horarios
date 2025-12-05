@@ -11,6 +11,9 @@ switch ($action) {
     case 'get':
         getDocente();
         break;
+    case 'get_v1':
+        getDocenteV1();
+        break;
     case 'horario':
         getHorarioDocente();
         break;
@@ -23,7 +26,6 @@ switch ($action) {
     case 'delete':
         deleteDocente();
         break;
-
     case 'top':
         topDocentes();
         break;
@@ -138,6 +140,49 @@ function getDocente()
 
     jsonResponse(true, 'Docente obtenido', $docente);
 }
+
+function getDocenteV1()
+{
+    global $conn;
+    $id = $_GET['id'] ?? '';
+    if (empty($id)) {
+        jsonResponse(false, 'ID no proporcionado');
+        return;
+    }
+    $id = intval($id);
+    $sql = "SELECT d.*,
+                   GROUP_CONCAT(dm.materia_id) AS materias
+            FROM docente d
+            LEFT JOIN docente_materias dm ON d.id = dm.docente_id
+            WHERE d.id = ?
+            GROUP BY d.id";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        jsonResponse(false, 'Error en la consulta: ' . $conn->error);
+        return;
+    }
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows === 0) {
+        jsonResponse(false, 'Docente no encontrado');
+        return;
+    }
+    $docente = $result->fetch_assoc();
+
+    // Normalizar materias a arreglo de enteros
+    if (!empty($docente['materias'])) {
+        $parts = array_filter(array_map('trim', explode(',', $docente['materias'])), function ($v) {
+            return $v !== '';
+        });
+        $docente['materias'] = array_map('intval', $parts);
+    } else {
+        $docente['materias'] = [];
+    }
+
+    jsonResponse(true, 'Docente obtenido', $docente);
+}
+
 
 function getHorarioDocente()
 {

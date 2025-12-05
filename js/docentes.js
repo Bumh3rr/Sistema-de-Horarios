@@ -325,12 +325,13 @@ window.editDocente = async (id) => {
 
     try {
         showLoading(true);
-        const response = await fetch(`../php/docentes_api.php?action=get&id=${id}`);
+        const response = await fetch(`../php/docentes_api.php?action=get_v1&id=${id}`);
         const data = await response.json();
 
         showLoading(false);
         if (data.success) {
             const docente = data.data;
+            console.log(docente);
 
             document.getElementById('docente_id').value = docente.id;
             document.getElementById('nombre').value = docente.nombre;
