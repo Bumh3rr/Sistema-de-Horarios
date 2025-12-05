@@ -71,7 +71,6 @@ function renderCarreras(carreras) {
     `).join('');
 }
 
-
 // Manejar envío de formulario
 async function handleSubmitCarrera(e) {
     e.preventDefault();

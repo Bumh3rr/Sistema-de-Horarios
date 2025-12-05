@@ -43,15 +43,7 @@ requireLogin();
                         <div class="form-group" style="margin-bottom: 0;">
                             <select id="filterSemestre" class="form-input">
                                 <option value="">Todos los semestres</option>
-                                <option value="1">1er Semestre</option>
-                                <option value="2">2do Semestre</option>
-                                <option value="3">3er Semestre</option>
-                                <option value="4">4to Semestre</option>
-                                <option value="5">5to Semestre</option>
-                                <option value="6">6to Semestre</option>
-                                <option value="7">7mo Semestre</option>
-                                <option value="8">8vo Semestre</option>
-                                <option value="9">9no Semestre</option>
+                                x
                             </select>
                         </div>
                     </div>
@@ -70,7 +62,6 @@ requireLogin();
                                 <th>Carrera</th>
                                 <th>Semestre</th>
                                 <th>Créditos</th>
-                                <th>Alumnos Inscriptos</th>
                                 <th>Acciones</th>
                             </tr>
                             </thead>
@@ -83,11 +74,12 @@ requireLogin();
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
 
-<!-- Modal Materia -->
+<!-- Modal para generar grupos -->
 <div id="modalAgregarAlumnos" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -105,9 +97,29 @@ requireLogin();
             </div>
             <button class="modal-close" onclick="closeModal('modalAgregarAlumnos')">&times;</button>
         </div>
+
         <form id="formAgregarAlumnos">
             <div class="modal-body">
                 <input type="hidden" id="materia_id" name="materia_id">
+
+
+                <div class="grid"
+                     style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; background: #f8f9ff; padding: 12px; border-radius: 8px;">
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <span class="form-label" style="margin-bottom:4px;display:block;">Asignatura</span>
+                        <strong id="detalleMateriaNombre" style="font-size:1rem;color:#1f2933;">Seleccione una
+                            asignatura</strong>
+                        <small style="color:#6b7280;">Nombre oficial registrado</small>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <span class="form-label" style="margin-bottom:4px;display:block;">Semestre académico</span>
+                        <strong id="detalleMateriaSemestre" style="font-size:1rem;color:#1f2933;">-</strong>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <span class="form-label" style="margin-bottom:4px;display:block;">Programa académico</span>
+                        <strong id="detalleMateriaCarrera" style="font-size:1rem;color:#1f2933;">-</strong>
+                    </div>
+                </div>
 
                 <div class="form-group">
                     <label for="numero_alumnos" class="form-label">Numero de Alumnos</label>
@@ -161,7 +173,11 @@ requireLogin();
         <div class="modal-header">
             <div class="content-title-modal">
                 <div class="ico-modal">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><path fill="#5046e5" d="M243.6 148.8a6 6 0 0 1-8.4-1.2A53.58 53.58 0 0 0 192 126a6 6 0 0 1 0-12a26 26 0 1 0-25.18-32.5a6 6 0 0 1-11.62-3a38 38 0 1 1 59.91 39.63a65.7 65.7 0 0 1 29.69 22.27a6 6 0 0 1-1.2 8.4M189.19 213a6 6 0 0 1-2.19 8.2a5.9 5.9 0 0 1-3 .81a6 6 0 0 1-5.2-3a59 59 0 0 0-101.62 0a6 6 0 1 1-10.38-6a70.1 70.1 0 0 1 36.2-30.46a46 46 0 1 1 50.1 0A70.1 70.1 0 0 1 189.19 213M128 178a34 34 0 1 0-34-34a34 34 0 0 0 34 34m-58-58a6 6 0 0 0-6-6a26 26 0 1 1 25.18-32.51a6 6 0 1 0 11.62-3a38 38 0 1 0-59.91 39.63A65.7 65.7 0 0 0 11.2 140.4a6 6 0 1 0 9.6 7.2A53.58 53.58 0 0 1 64 126a6 6 0 0 0 6-6" stroke-width="6.5" stroke="#5046e5"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+                        <path fill="#5046e5"
+                              d="M243.6 148.8a6 6 0 0 1-8.4-1.2A53.58 53.58 0 0 0 192 126a6 6 0 0 1 0-12a26 26 0 1 0-25.18-32.5a6 6 0 0 1-11.62-3a38 38 0 1 1 59.91 39.63a65.7 65.7 0 0 1 29.69 22.27a6 6 0 0 1-1.2 8.4M189.19 213a6 6 0 0 1-2.19 8.2a5.9 5.9 0 0 1-3 .81a6 6 0 0 1-5.2-3a59 59 0 0 0-101.62 0a6 6 0 1 1-10.38-6a70.1 70.1 0 0 1 36.2-30.46a46 46 0 1 1 50.1 0A70.1 70.1 0 0 1 189.19 213M128 178a34 34 0 1 0-34-34a34 34 0 0 0 34 34m-58-58a6 6 0 0 0-6-6a26 26 0 1 1 25.18-32.51a6 6 0 1 0 11.62-3a38 38 0 1 0-59.91 39.63A65.7 65.7 0 0 0 11.2 140.4a6 6 0 1 0 9.6 7.2A53.58 53.58 0 0 1 64 126a6 6 0 0 0 6-6"
+                              stroke-width="6.5" stroke="#5046e5"/>
+                    </svg>
                 </div>
                 <h3 class="modal-title" id="modalMateriaTitle">Grupos Generados</h3>
             </div>
@@ -181,9 +197,8 @@ requireLogin();
     </div>
 </div>
 
-
 <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
 <script src="../js/main.js"></script>
-<script type="module" src="../js/alumnos.js"></script>
+<script type="module" src="../js/generar_grupos.js"></script>
 </body>
 </html>

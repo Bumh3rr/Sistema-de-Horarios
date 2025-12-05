@@ -1,8 +1,4 @@
-import {login} from './auth/Auth.js';
 import {notyf} from './notify/Config.js';
-import AuthRepository from '../js/services/AuthService.js';
-
-const authService = new AuthRepository();
 
 const showLoading = (isVisible) => {
     if (isVisible) {
@@ -15,49 +11,22 @@ const showLoading = (isVisible) => {
 document.addEventListener('DOMContentLoaded', function () {
     const loginForm = document.getElementById('loginForm');
 
+
     loginForm.addEventListener('submit', async function (e) {
         e.preventDefault();
-
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
 
-        if (!email || !password) {
-            notyf.open({type: 'warning', message: 'Por favor, complete todos los campos'});
-            return;
-        }
-
         try {
             showLoading(true);
-            const response = await login(email, password);
+            const response = await fetch('../php/auth.php?action=login&email='+email+'&password='+password);
+            const data = await response.json();
 
-            if (response.success) {
-                // Enviar POST con FormData para que auth.php reciba action y email correctamente
-                const user = await authService.getUserByEmail(email);
-
-                if(!user.success){
-                    notyf.error(user.message || 'Error al obtener datos del usuario');
-                    return;
-                }
-
-                const form = new FormData();
-                form.append('action', 'login');
-                form.append('id', user.data.id);
-                form.append('rol', user.data.role);
-
-                const responseApi = await fetch('../php/auth.php', {
-                    method: 'POST',
-                    body: form
-                });
-                const dataApi = await responseApi.json();
-
-                if (dataApi.success) {
-                    notyf.success("¡Inicio de sesión exitoso!");
-                    window.location.href = dataApi.data.redirect; // <- Redirigir según la respuesta del servidor
-                } else {
-                    notyf.error(dataApi.message || 'Error en autenticación local');
-                }
+            if (data.success) {
+                notyf.success("¡Inicio de sesión exitoso!");
+                window.location.href = data.data.redirect; // <- Redirigir según la respuesta del servidor
             } else {
-                notyf.error(response.message || 'Credenciales inválidas');
+                notyf.error(data.message || 'Credenciales inválidas');
             }
         } catch (error) {
             console.error(error);

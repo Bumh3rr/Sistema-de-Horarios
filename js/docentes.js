@@ -1,10 +1,9 @@
 import {showLoading, notyf} from './notify/Config.js';
 import {ModalManager} from './utils/ModalManager.js';
-import AuthService from './services/AuthService.js';
-import {register} from './auth/Auth.js';
 
 const modalManager = new ModalManager();
-const authService = new AuthService();
+let currentDocenteData = null;
+let currentHorariosDocente = [];
 
 // Gestión de Docentes
 document.addEventListener('DOMContentLoaded', function () {
@@ -105,7 +104,6 @@ async function loadDocentes() {
     }
 }
 
-
 async function loadMaterias(selected = []) {
     const container = document.getElementById('docenteMateriasContainer');
     if (!container) return;
@@ -153,14 +151,19 @@ function renderDocentes(docentes) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center">No se encontraron docentes</td></tr>';
         return;
     }
+    console.log(docentes);
 
     tbody.innerHTML = docentes.map(docente => `
         <tr>
             <td>${docente.id}</td>
             <td><strong>${docente.nombre} ${docente.apellido}</strong></td>
-            <td>${docente.email}</td>
             <td><span class="badge badge-secondary">${docente.rfc || '-'}</span></td>
             <td>${docente.telefono || '-'}</td>
+            <td>
+                <span class="badge badge-${docente.turno === 'medio' ? 'warning' : 'info'}">
+                    ${docente.turno === 'medio' ? 'Medio Tiempo ' : 'Tiempo Completo'}
+                </span>
+            </td>
             <td>
                 <span class="badge badge-${docente.activo == 1 ? 'success' : 'error'}">
                     ${docente.activo == 1 ? 'Activo' : 'Inactivo'}
@@ -213,13 +216,6 @@ async function handleSubmitDocente(e) {
         return;
     }
 
-
-    const email = formData.get('email');
-    if (!isValidEmail(email)) {
-        notyf.error('El formato del email no es válido');
-        return;
-    }
-
     const rfc = formData.get('rfc');
     if (rfc && rfc.length !== 13) {
         notyf.error('El RFC debe tener 13 caracteres');
@@ -256,22 +252,6 @@ async function submitDocenteForm(formData, form, action) {
 
         const data = await response.json();
         if (data.success) {
-            if (action === 'create') {
-                const email = formData.get('email');
-                const password = formData.get('password');
-                const result  = await register(email, password);
-                const uid = result.user.uid;
-                const userData = {
-                    email: email,
-                    role: 'docente'
-                };
-                const authResult = await authService.registerUser(uid,userData);
-                if (!authResult.success) {
-                    notyf.error('Docente creado, pero error al guardar en el sistema de autenticación: ' + authResult.message);
-                    return;
-                }
-            }
-
             notyf.success(data.message);
             closeModal('modalDocente');
             form.reset();
@@ -292,32 +272,6 @@ async function submitDocenteForm(formData, form, action) {
     } finally {
         showLoading(false);
     }
-}
-
-// Renderizar horario del docente
-function renderHorarioDocente(horarios) {
-    // Limpiar todas las celdas
-    document.querySelectorAll('#scheduleGridDocente .schedule-cell').forEach(cell => {
-        cell.innerHTML = '';
-    });
-
-    // Renderizar cada horario
-    horarios.forEach(horario => {
-        const cells = document.querySelectorAll(`#scheduleGridDocente [data-dia="${horario.dia_semana}"][data-hora="${horario.hora_inicio}"]`);
-
-        cells.forEach(cell => {
-            cell.innerHTML = `
-                <div class="schedule-class">
-                    <div class="schedule-class-name">${horario.materia_nombre}</div>
-                    <div class="schedule-class-info">
-                        Grupo: ${horario.grupo_nombre}<br>
-                        Aula: ${horario.aula_nombre}<br>
-                        ${formatTime(horario.hora_inicio)} - ${formatTime(horario.hora_fin)}
-                    </div>
-                </div>
-            `;
-        });
-    });
 }
 
 async function performDeleteDocente(id) {
@@ -381,9 +335,8 @@ window.editDocente = async (id) => {
             document.getElementById('docente_id').value = docente.id;
             document.getElementById('nombre').value = docente.nombre;
             document.getElementById('apellido').value = docente.apellido;
-            document.getElementById('email').value = docente.email;
-            document.getElementById('password').value = docente.password;
             document.getElementById('rfc').value = docente.rfc || '';
+            document.getElementById('turno').value = docente.turno || '';
             document.getElementById('telefono').value = docente.telefono || '';
             document.getElementById('activo').checked = docente.activo === 1;
 
@@ -403,10 +356,11 @@ window.editDocente = async (id) => {
     }
 }
 
-// Ver horario del docente
 window.viewHorarioDocente = async (id) => {
     try {
-        showLoading(true)
+        showLoading(true);
+
+        // Obtener datos del docente
         const responseDocente = await fetch(`../php/docentes_api.php?action=get&id=${id}`);
         const dataDocente = await responseDocente.json();
 
@@ -416,33 +370,343 @@ window.viewHorarioDocente = async (id) => {
         }
 
         const docente = dataDocente.data;
-
-        // Mostrar info del docente
-        document.getElementById('docenteInfo').innerHTML = `
-            <h4 style="margin-bottom: 8px; color: var(--text-primary);">
-                ${docente.nombre} ${docente.apellido}
-            </h4>
-            <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">
-                <strong>Email:</strong> ${docente.email} | 
-                <strong>RFC:</strong> ${docente.rfc || 'No especificado'} | 
-                <strong>Teléfono:</strong> ${docente.telefono || 'No especificado'}
-            </p>
-        `;
+        currentDocenteData = docente;
 
         // Obtener horario del docente
         const responseHorario = await fetch(`../php/docentes_api.php?action=horario&id=${id}`);
         const dataHorario = await responseHorario.json();
 
-        if (dataHorario.success) {
-            renderHorarioDocente(dataHorario.data);
+        if (!dataHorario.success) {
+            notyf.error('Error al cargar el horario');
+            return;
         }
 
-        document.getElementById('modalHorarioDocenteTitle').textContent = `Horario de ${docente.nombre} ${docente.apellido}`;
+        currentHorariosDocente = dataHorario.data || [];
+
+        // Renderizar información del docente
+        renderDocenteInfo(docente, currentHorariosDocente);
+
+        // Generar tabla de horario
+        generateHorarioTable(currentHorariosDocente);
+
+        // Actualizar título
+        document.getElementById('modalHorarioDocenteTitle').textContent =
+            `Horario de ${docente.nombre} ${docente.apellido}`;
+
+        // Abrir modal
         openModal('modalHorarioDocente');
     } catch (error) {
         console.error('Error:', error);
         notyf.error('Error al cargar el horario');
     } finally {
-        showLoading(false)
+        showLoading(false);
     }
+};
+
+function renderDocenteInfo(docente, horarios) {
+    const container = document.getElementById('docenteInfo');
+
+    // Calcular estadísticas
+    const totalHoras = horarios.length;
+    const materiasUnicas = new Set(horarios.map(h => h.materia_nombre)).size;
+    const gruposUnicos = new Set(horarios.map(h => h.grupo_nombre)).size;
+
+    // Determinar límites según turno
+    const limiteHoras = docente.horas_max_semana || (docente.turno === 'medio' ? 20 : 22);
+    const porcentajeCarga = ((totalHoras / limiteHoras) * 100).toFixed(0);
+
+    container.innerHTML = `
+        <h4>${docente.nombre} ${docente.apellido}</h4>
+        <p style="margin-bottom: 16px;">
+            <strong>RFC:</strong> ${docente.rfc || 'No especificado'} | 
+            <strong>Teléfono:</strong> ${docente.telefono || 'No especificado'} | 
+            <strong>Turno:</strong> ${docente.turno === 'medio' ? 'Medio Tiempo' : 'Tiempo Completo'}
+        </p>
+        <div class="docente-info-stats">
+            <div class="info-stat">
+                <span class="info-stat-value">${totalHoras}h</span>
+                <span class="info-stat-label">Horas Asignadas</span>
+            </div>
+            <div class="info-stat">
+                <span class="info-stat-value">${limiteHoras}h</span>
+                <span class="info-stat-label">Límite Máximo</span>
+            </div>
+            <div class="info-stat">
+                <span class="info-stat-value">${materiasUnicas}</span>
+                <span class="info-stat-label">Materias</span>
+            </div>
+            <div class="info-stat">
+                <span class="info-stat-value">${gruposUnicos}</span>
+                <span class="info-stat-label">Grupos</span>
+            </div>
+        </div>
+    `;
+
+    // Actualizar información para PDF
+    document.getElementById('docenteNombrePrint').textContent =
+        `Docente: ${docente.nombre} ${docente.apellido}`;
+    document.getElementById('periodoActual').textContent =
+        `Periodo: Agosto - Diciembre 2025`;
 }
+
+function generateHorarioTable(horarios) {
+    const tbody = document.getElementById('scheduleBodyDocente');
+    tbody.innerHTML = '';
+
+    const bloques = [
+        { inicio: '07:00', fin: '08:00', label: '07:00 - 08:00' },
+        { inicio: '08:00', fin: '09:00', label: '08:00 - 09:00' },
+        { inicio: '09:00', fin: '10:00', label: '09:00 - 10:00' },
+        { inicio: '10:00', fin: '11:00', label: '10:00 - 11:00' },
+        { inicio: '11:00', fin: '12:00', label: '11:00 - 12:00' },
+        { inicio: '12:00', fin: '13:00', label: '12:00 - 13:00' },
+        { inicio: '13:00', fin: '14:00', label: '13:00 - 14:00' },
+        { inicio: '14:00', fin: '15:00', label: '14:00 - 15:00' }
+    ];
+
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+    // Crear mapa de horarios normalizando hora a HH:MM
+    const horarioMap = {};
+    horarios.forEach(h => {
+        const horaNorm = formatTime(h.hora_inicio); // asegura HH:MM
+        const key = `${h.dia_semana}-${horaNorm}`;
+        horarioMap[key] = h;
+    });
+
+    // Generar filas
+    bloques.forEach(bloque => {
+        const row = document.createElement('tr');
+
+        // Celda de hora
+        const horaCell = document.createElement('td');
+        horaCell.className = 'hora-cell';
+        horaCell.textContent = bloque.label;
+        row.appendChild(horaCell);
+
+        // Celdas para cada día
+        dias.forEach(dia => {
+            const cell = document.createElement('td');
+            const key = `${dia}-${bloque.inicio}`; // bloque.inicio ya es HH:MM
+            const horario = horarioMap[key];
+
+            if (horario) {
+                cell.innerHTML = `
+                    <div class="schedule-class">
+                        <div class="schedule-class-header">
+                            <div class="schedule-class-name">${horario.materia_nombre}</div>
+                            <div class="schedule-class-grupo">Grupo: ${horario.grupo_nombre}</div>
+                        </div>
+                        <div class="schedule-class-body">
+                            <div class="schedule-class-info">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                                <span>${horario.aula_nombre}</span>
+                            </div>
+                            <div class="schedule-class-info">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span>${formatTime(horario.hora_inicio)} - ${formatTime(horario.hora_fin)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                cell.className = 'empty-cell';
+                cell.innerHTML = '<div style="text-align: center; color: #adb5bd; font-size: 12px;">—</div>';
+            }
+
+            row.appendChild(cell);
+        });
+
+        tbody.appendChild(row);
+    });
+
+    // Generar resumen
+    generateResumen(horarios);
+}
+
+function generateResumen(horarios) {
+    const container = document.getElementById('horarioResumen');
+
+    const totalHoras = horarios.length;
+    const materiasUnicas = new Set(horarios.map(h => h.materia_nombre)).size;
+    const gruposUnicos = new Set(horarios.map(h => h.grupo_nombre)).size;
+
+    // Horas por día
+    const horasPorDia = {};
+    ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].forEach(dia => {
+        horasPorDia[dia] = horarios.filter(h => h.dia_semana === dia).length;
+    });
+
+    const diaMaxHoras = Object.entries(horasPorDia).sort((a, b) => b[1] - a[1])[0];
+
+    container.innerHTML = `
+        <div class="resumen-item">
+            <span class="resumen-item-value">${totalHoras}</span>
+            <span class="resumen-item-label">Horas Totales</span>
+        </div>
+        <div class="resumen-item">
+            <span class="resumen-item-value">${materiasUnicas}</span>
+            <span class="resumen-item-label">Materias</span>
+        </div>
+        <div class="resumen-item">
+            <span class="resumen-item-value">${gruposUnicos}</span>
+            <span class="resumen-item-label">Grupos</span>
+        </div>
+        <div class="resumen-item">
+            <span class="resumen-item-value">${diaMaxHoras ? diaMaxHoras[0] : '-'}</span>
+            <span class="resumen-item-label">Día + Horas</span>
+        </div>
+    `;
+}
+
+function formatTime(time) {
+    if (!time) return '';
+    const parts = time.split(':');
+    return `${parts[0]}:${parts[1]}`;
+}
+
+window.exportarHorarioPDF = async () => {
+    try {
+        if (typeof window.jspdf === 'undefined') {
+            notyf.error('Librería PDF no cargada');
+            return;
+        }
+
+        showLoading(true);
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        if (!currentDocenteData) {
+            notyf.error('No hay datos del docente');
+            return;
+        }
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 15;
+        let yPos = margin;
+
+        // Header
+        doc.setFillColor(80, 70, 229);
+        doc.rect(0, 0, pageWidth, 35, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('Tecnológico Nacional de México', pageWidth / 2, 12, { align: 'center' });
+
+        doc.setFontSize(14);
+        doc.text('Campus Chilpancingo', pageWidth / 2, 20, { align: 'center' });
+
+        doc.setFontSize(12);
+        doc.text('Horario de Clases', pageWidth / 2, 28, { align: 'center' });
+
+        yPos = 45;
+
+        // Información del docente
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Docente: ${currentDocenteData.nombre} ${currentDocenteData.apellido}`, margin, yPos);
+
+        yPos += 7;
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(10);
+        doc.text(`RFC: ${currentDocenteData.rfc || 'N/A'}`, margin, yPos);
+        doc.text(`Turno: ${currentDocenteData.turno === 'medio' ? 'Medio Tiempo' : 'Tiempo Completo'}`, margin + 80, yPos);
+        doc.text(`Periodo: Agosto - Diciembre 2025`, margin + 160, yPos);
+
+        yPos += 10;
+
+        // Preparar datos de tabla
+        const bloques = [
+            '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00',
+            '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00'
+        ];
+        const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+        const tableData = [];
+
+        bloques.forEach((bloque) => {
+            const rowData = [bloque];
+            const horaInicio = bloque.split(' - ')[0]; // HH:MM
+
+            dias.forEach(dia => {
+                // Normalizar al comparar
+                const horario = currentHorariosDocente.find(h =>
+                    h.dia_semana === dia && formatTime(h.hora_inicio) === horaInicio
+                );
+
+                if (horario) {
+                    rowData.push(`${horario.materia_nombre}\nGrupo: ${horario.grupo_nombre}\n${horario.aula_nombre}`);
+                } else {
+                    rowData.push('—');
+                }
+            });
+
+            tableData.push(rowData);
+        });
+
+        // Crear tabla con autoTable
+        doc.autoTable({
+            startY: yPos,
+            head: [['Hora', ...dias]],
+            body: tableData,
+            theme: 'grid',
+            styles: {
+                fontSize: 8,
+                cellPadding: 3,
+                overflow: 'linebreak',
+                halign: 'center',
+                valign: 'middle'
+            },
+            headStyles: {
+                fillColor: [80, 70, 229],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            columnStyles: {
+                0: { cellWidth: 25, fontStyle: 'bold', fillColor: [248, 249, 250] }
+            },
+            alternateRowStyles: {
+                fillColor: [250, 250, 250]
+            },
+            margin: { left: margin, right: margin }
+        });
+
+        // Footer
+        const finalY = doc.lastAutoTable.finalY || yPos + 100;
+        if (finalY < pageHeight - 30) {
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text(
+                `Generado: ${new Date().toLocaleDateString('es-MX')} ${new Date().toLocaleTimeString('es-MX')}`,
+                pageWidth / 2,
+                pageHeight - 10,
+                { align: 'center' }
+            );
+        }
+
+        const filename = `Horario_${currentDocenteData.nombre}_${currentDocenteData.apellido}.pdf`;
+        doc.save(filename);
+
+        notyf.success('PDF generado exitosamente');
+    } catch (error) {
+        console.error('Error al generar PDF:', error);
+        notyf.error('Error al generar el PDF');
+    } finally {
+        showLoading(false);
+    }
+};

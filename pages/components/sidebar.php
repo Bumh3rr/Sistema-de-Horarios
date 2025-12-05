@@ -10,38 +10,28 @@ if ($value === '') {
     exit;
 }
 
-if ($value === 'sub_director') {
+if ($value === 'admin') {
     $menu = [
             'principal' => [
-                    ['name' => 'Dashboard', 'page' => 'dashboard', 'icon' => 'home'],
-                    ['name' => 'Horarios', 'page' => 'horarios', 'icon' => 'calendar'],
+                    ['name' => 'Dashboard', 'page' => 'dashboard', 'icon' => 'home']
             ],
             'gestión' => [
                     ['name' => 'Carreras', 'page' => 'carreras', 'icon' => 'briefcase'],
                     ['name' => 'Materias', 'page' => 'materias', 'icon' => 'book'],
                     ['name' => 'Docentes', 'page' => 'docentes', 'icon' => 'user'],
-                    ['name' => 'Generar Grupos', 'page' => 'alumnos', 'icon' => 'generate'],
+                    ['name' => 'Generar Grupos', 'page' => 'generar_grupos', 'icon' => 'generate'],
                     ['name' => 'Grupos', 'page' => 'grupos', 'icon' => 'users'],
                     ['name' => 'Aulas', 'page' => 'aulas', 'icon' => 'building'],
-            ]
-    ];
-} else if ($value === 'jefe_departamento') {
-    $menu = [
-            'principal' => [
-                    ['name' => 'Dashboard', 'page' => 'dashboard', 'icon' => 'home'],
                     ['name' => 'Horarios', 'page' => 'horarios', 'icon' => 'calendar'],
             ],
-            'gestión' => [
-                    ['name' => 'Materias', 'page' => 'materias', 'icon' => 'book'],
-                    ['name' => 'Generar Grupos', 'page' => 'alumnos', 'icon' => 'generate'],
-                    ['name' => 'Grupos', 'page' => 'grupos', 'icon' => 'users'],
-                    ['name' => 'Aulas', 'page' => 'aulas', 'icon' => 'building'],
+            'Autenticación' => [
+                    ['name' => 'Usuarios', 'page' => 'usuarios', 'icon' => 'users-auth']
             ]
     ];
 } else if ($value === 'docente') {
     $menu = [
             'gestión' => [
-                    ['name' => 'Docentes', 'page' => 'docentes', 'icon' => 'user']
+                    ['name' => 'Horario', 'page' => 'horario_usuario', 'icon' => 'calendar']
             ]
     ];
 }
@@ -56,7 +46,8 @@ $icons = [
         'briefcase' => '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>',
         'building' => '<rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path>',
         'generate' => '<path d="M12 20h9"></path><path d="M12 4h9"></path><path d="M4 9l4-4-4-4"></path><path d="M4 15l4 4-4 4"></path>',
-];
+        'users-auth' => '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path><circle cx="19" cy="7" r="2"></circle><path d="M19 9v5"></path><path d="M21 11h-4"></path>'
+]
 ?>
 <aside class="sidebar">
     <div class="sidebar-header">
@@ -69,7 +60,16 @@ $icons = [
             </div>
             <div class="sidebar-logo-text">
                 <h2>Horarios</h2>
-                <p>Administrador</p>
+                <?php
+                $role = $_SESSION['role'] ?? '';
+                if ($role === 'admin') {
+                    echo '<p>Administrador</p>';
+                } elseif ($role === 'docente') {
+                    echo '<p>Docente</p>';
+                } else {
+                    echo '<p>Usuario</p>';
+                }
+                ?>
             </div>
         </div>
     </div>
@@ -98,10 +98,8 @@ $icons = [
                 <?php
                 // Mostrar avatar basado en el rol
                 $role = $_SESSION['role'] ?? '';
-                if ($role === 'sub_director') {
-                    echo 'Sub';
-                } elseif ($role === 'jefe_departamento') {
-                    echo 'Jd';
+                if ($role === 'admin') {
+                    echo 'A';
                 } elseif ($role === 'docente') {
                     echo 'D';
                 } else {
@@ -114,10 +112,8 @@ $icons = [
                     <?php
                     // Mostrar el nombre del usuario basado en su rol
                     $role = $_SESSION['role'] ?? '';
-                    if ($role === 'sub_director') {
-                        echo 'Sub Director';
-                    } elseif ($role === 'jefe_departamento') {
-                        echo 'Jefe de Departamento';
+                    if ($role === 'admin') {
+                        echo 'Administrador';
                     } elseif ($role === 'docente') {
                         echo 'Docente';
                     } else {

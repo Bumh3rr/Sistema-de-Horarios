@@ -1,34 +1,89 @@
-// Gestión de Horarios
-document.addEventListener('DOMContentLoaded', function() {
-    loadCarreras();
-    loadGruposSelect();
-    loadAulasSelect();
-    loadHorarios();
+import {showLoading, notyf} from './notify/Config.js';
+import {ModalManager} from './utils/ModalManager.js';
 
+const modalManager = new ModalManager();
+// Configuración
+const HORA_INICIO_INSTITUCIONAL = '07:00';
+const HORA_FIN_INSTITUCIONAL = '15:00';
+const BLOQUES_HORARIOS = [
+    { inicio: '07:00', fin: '08:00', label: '07:00 - 08:00' },
+    { inicio: '08:00', fin: '09:00', label: '08:00 - 09:00' },
+    { inicio: '09:00', fin: '10:00', label: '09:00 - 10:00' },
+    { inicio: '10:00', fin: '11:00', label: '10:00 - 11:00' },
+    { inicio: '11:00', fin: '12:00', label: '11:00 - 12:00' },
+    { inicio: '12:00', fin: '13:00', label: '12:00 - 13:00' },
+    { inicio: '13:00', fin: '14:00', label: '13:00 - 14:00' },
+    { inicio: '14:00', fin: '15:00', label: '14:00 - 15:00' }
+];
+
+// Estado global
+let horariosData = [];
+let carrerasData = [];
+let gruposData = [];
+let aulasData = [];
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    initializeHorarios();
+});
+
+async function initializeHorarios() {
+    try {
+        showLoading();
+
+        // Cargar datos iniciales
+        await Promise.all([
+            loadCarreras(),
+            loadGrupos(),
+            loadAulas(),
+            loadHorarios()
+        ]);
+
+        // Configurar event listeners
+        setupEventListeners();
+
+        // Poblar selects de filtros
+        populateFilterAulas();
+
+        // Renderizar horario inicial
+        renderSchedule();
+        renderHorariosTable();
+
+        hideLoading();
+    } catch (error) {
+        console.error('Error al inicializar:', error);
+        showAlert('Error al cargar los datos', 'error');
+        hideLoading();
+    }
+}
+
+function setupEventListeners() {
     // Filtros
     const filterCarrera = document.getElementById('filterCarrera');
     const filterSemestre = document.getElementById('filterSemestre');
     const filterGrupo = document.getElementById('filterGrupo');
+    const filterAula = document.getElementById('filterAula'); // ← AGREGAR
 
     if (filterCarrera) {
         filterCarrera.addEventListener('change', function() {
-            loadSchedule();
-            loadHorarios();
+            handleFilterChange();
+            loadGruposByCarreraAndSemestre();
         });
     }
 
     if (filterSemestre) {
         filterSemestre.addEventListener('change', function() {
-            loadSchedule();
-            loadHorarios();
+            handleFilterChange();
+            loadGruposByCarreraAndSemestre();
         });
     }
 
     if (filterGrupo) {
-        filterGrupo.addEventListener('change', function() {
-            loadSchedule();
-            loadHorarios();
-        });
+        filterGrupo.addEventListener('change', handleFilterChange);
+    }
+
+    if (filterAula) {
+        filterAula.addEventListener('change', handleFilterChange);
     }
 
     // Formulario de horario
@@ -36,226 +91,593 @@ document.addEventListener('DOMContentLoaded', function() {
     if (formHorario) {
         formHorario.addEventListener('submit', handleSubmitHorario);
     }
-});
 
-// Cargar carreras para el filtro
+    // Campos del formulario con validación en tiempo real
+    const grupoSelect = document.getElementById('grupo_id');
+    const aulaSelect = document.getElementById('aula_id');
+    const diaSelect = document.getElementById('dia_semana');
+    const horaInicio = document.getElementById('hora_inicio');
+    const horaFin = document.getElementById('hora_fin');
+
+    if (grupoSelect) grupoSelect.addEventListener('change', handleGrupoChange);
+    if (aulaSelect) aulaSelect.addEventListener('change', validateFormFields);
+    if (diaSelect) diaSelect.addEventListener('change', validateFormFields);
+    if (horaInicio) horaInicio.addEventListener('change', handleHoraChange);
+    if (horaFin) horaFin.addEventListener('change', validateFormFields);
+
+    // Configurar límites de hora
+    if (horaInicio) {
+        horaInicio.min = HORA_INICIO_INSTITUCIONAL;
+        horaInicio.max = '14:00'; // Máximo inicio a las 2 PM para permitir clases hasta las 3 PM
+    }
+    if (horaFin) {
+        horaFin.min = '08:00';
+        horaFin.max = HORA_FIN_INSTITUCIONAL;
+    }
+}
+
+// ========== CARGA DE DATOS ==========
+
 async function loadCarreras() {
     try {
-        const response = await fetch('../../php/carreras_api.php?action=list');
+        const response = await fetch('../php/carreras_api.php?action=list');
         const data = await response.json();
 
         if (data.success) {
-            const select = document.getElementById('filterCarrera');
-            data.data.forEach(carrera => {
-                const option = document.createElement('option');
-                option.value = carrera.id;
-                option.textContent = carrera.nombre;
-                select.appendChild(option);
-            });
+            carrerasData = data.data;
+            populateCarrerasSelect();
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error al cargar carreras:', error);
     }
 }
 
-// Cargar grupos para el select
-async function loadGruposSelect() {
+async function loadGrupos() {
     try {
-        const response = await fetch('../../php/grupos_api.php?action=list');
+        const response = await fetch('../php/grupos_api.php?action=list');
         const data = await response.json();
 
         if (data.success) {
-            const select = document.getElementById('grupo_id');
-            const filterSelect = document.getElementById('filterGrupo');
-            
-            data.data.forEach(grupo => {
+            gruposData = data.data;
+            populateGruposSelect();
+        }
+    } catch (error) {
+        console.error('Error al cargar grupos:', error);
+    }
+}
+
+async function loadAulas() {
+    try {
+        const response = await fetch('../php/aulas_api.php?action=list');
+        const data = await response.json();
+
+        if (data.success) {
+            aulasData = data.data;
+            populateAulasSelect();
+        }
+    } catch (error) {
+        console.error('Error al cargar aulas:', error);
+    }
+}
+
+async function loadHorarios() {
+    try {
+        const filterCarrera = document.getElementById('filterCarrera')?.value || '';
+        const filterSemestre = document.getElementById('filterSemestre')?.value || '';
+        const filterGrupo = document.getElementById('filterGrupo')?.value || '';
+        const filterAula = document.getElementById('filterAula')?.value || ''; // ← AGREGAR
+
+        let url = '../php/horarios_api.php?action=list';
+        if (filterCarrera) url += `&carrera=${filterCarrera}`;
+        if (filterSemestre) url += `&semestre=${filterSemestre}`;
+        if (filterGrupo) url += `&grupo=${filterGrupo}`;
+        if (filterAula) url += `&aula=${filterAula}`; // ← AGREGAR
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            horariosData = data.data;
+        }
+    } catch (error) {
+        console.error('Error al cargar horarios:', error);
+    }
+}
+
+// ========== POBLAR SELECTS ==========
+
+function populateCarrerasSelect() {
+    const filterCarrera = document.getElementById('filterCarrera');
+
+    if (filterCarrera) {
+        filterCarrera.innerHTML = '<option value="">Todas las carreras</option>';
+        carrerasData.forEach(carrera => {
+            const option = document.createElement('option');
+            option.value = carrera.id;
+            option.textContent = carrera.nombre;
+            filterCarrera.appendChild(option);
+        });
+    }
+}
+
+function populateGruposSelect() {
+    const filterGrupo = document.getElementById('filterGrupo');
+    const grupoIdModal = document.getElementById('grupo_id');
+
+    if (filterGrupo) {
+        filterGrupo.innerHTML = '<option value="">Todos los grupos</option>';
+        gruposData.forEach(grupo => {
+            const option = document.createElement('option');
+            option.value = grupo.id;
+            option.textContent = `${grupo.nombre} - ${grupo.materia_nombre}`;
+            filterGrupo.appendChild(option);
+        });
+    }
+
+    if (grupoIdModal) {
+        grupoIdModal.innerHTML = '<option value="">Seleccionar grupo...</option>';
+        gruposData.forEach(grupo => {
+            // Solo grupos con profesor asignado
+            if (grupo.profesor_id) {
                 const option = document.createElement('option');
                 option.value = grupo.id;
-                option.textContent = `${grupo.nombre} - ${grupo.materia_nombre}`;
-                select.appendChild(option.cloneNode(true));
-                if (filterSelect) filterSelect.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Error:', error);
+                option.textContent = `${grupo.nombre} - ${grupo.materia_nombre} (${grupo.profesor_nombre})`;
+                option.dataset.profesorId = grupo.profesor_id;
+                option.dataset.materiaId = grupo.materia_id;
+                grupoIdModal.appendChild(option);
+            }
+        });
     }
 }
 
-// Cargar aulas para el select
-async function loadAulasSelect() {
-    try {
-        const response = await fetch('../../php/aulas_api.php?action=list');
-        const data = await response.json();
+function populateAulasSelect() {
+    const aulaSelect = document.getElementById('aula_id');
 
-        if (data.success) {
-            const select = document.getElementById('aula_id');
-            data.data.forEach(aula => {
+    if (aulaSelect) {
+        aulaSelect.innerHTML = '<option value="">Seleccionar aula...</option>';
+
+        // Agrupar por edificio
+        const aulasPorEdificio = {};
+        aulasData.forEach(aula => {
+            if (!aulasPorEdificio[aula.edificio]) {
+                aulasPorEdificio[aula.edificio] = [];
+            }
+            aulasPorEdificio[aula.edificio].push(aula);
+        });
+
+        // Crear optgroups
+        Object.keys(aulasPorEdificio).sort().forEach(edificio => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = `Edificio ${edificio}`;
+
+            aulasPorEdificio[edificio].forEach(aula => {
                 const option = document.createElement('option');
                 option.value = aula.id;
-                option.textContent = `${aula.nombre} (${aula.edificio}) - Cap: ${aula.capacidad}`;
-                select.appendChild(option);
+                option.textContent = `${aula.nombre} - ${aula.tipo} (Cap: ${aula.capacidad})`;
+                option.dataset.tipo = aula.tipo;
+                option.dataset.capacidad = aula.capacidad;
+                optgroup.appendChild(option);
             });
-        }
-    } catch (error) {
-        console.error('Error:', error);
+
+            aulaSelect.appendChild(optgroup);
+        });
     }
 }
 
-// Cargar horarios en tabla
-async function loadHorarios() {
-    const tbody = document.getElementById('horariosTableBody');
-    const grupo = document.getElementById('filterGrupo')?.value || '';
+function populateFilterAulas() {
+    const filterAula = document.getElementById('filterAula');
 
+    if (filterAula) {
+        filterAula.innerHTML = '<option value="">Todas las aulas</option>';
+
+        // Agrupar por edificio
+        const aulasPorEdificio = {};
+        aulasData.forEach(aula => {
+            if (!aulasPorEdificio[aula.edificio]) {
+                aulasPorEdificio[aula.edificio] = [];
+            }
+            aulasPorEdificio[aula.edificio].push(aula);
+        });
+
+        // Crear optgroups
+        Object.keys(aulasPorEdificio).sort().forEach(edificio => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = `Edificio ${edificio}`;
+
+            aulasPorEdificio[edificio].forEach(aula => {
+                const option = document.createElement('option');
+                option.value = aula.id;
+                option.textContent = `${aula.nombre} (${aula.tipo})`;
+                optgroup.appendChild(option);
+            });
+
+            filterAula.appendChild(optgroup);
+        });
+    }
+}
+
+async function loadGruposByCarreraAndSemestre() {
     try {
-        const response = await fetch(`../php/horarios_api.php?action=list&grupo=${grupo}`);
+        const carreraId = document.getElementById('filterCarrera')?.value;
+        const semestre = document.getElementById('filterSemestre')?.value;
+
+        let url = '../php/grupos_api.php?action=list';
+        if (carreraId) url += `&carrera=${carreraId}`;
+        if (semestre) url += `&semestre=${semestre}`;
+
+        const response = await fetch(url);
         const data = await response.json();
 
         if (data.success) {
-            renderHorarios(data.data);
-        } else {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Error al cargar horarios</td></tr>';
+            gruposData = data.data;
+            populateGruposSelect();
         }
     } catch (error) {
-        console.error('Error:', error);
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Error al cargar horarios</td></tr>';
+        console.error('Error al cargar grupos:', error);
     }
 }
 
-// Renderizar horarios en tabla
-function renderHorarios(horarios) {
-    const tbody = document.getElementById('horariosTableBody');
+// ========== RENDERIZADO ==========
 
-    if (horarios.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No se encontraron horarios</td></tr>';
+function renderSchedule() {
+    const scheduleGrid = document.querySelector('.schedule-grid');
+    if (!scheduleGrid) return;
+
+    // Limpiar celdas
+    const cells = scheduleGrid.querySelectorAll('.schedule-cell');
+    cells.forEach(cell => {
+        cell.innerHTML = '';
+        cell.className = 'schedule-cell';
+        cell.style.display = ''; // Resetear display
+        cell.style.gridRow = ''; // Resetear gridRow
+    });
+
+    // Llenar con horarios
+    horariosData.forEach(horario => {
+        const horaInicio = horario.hora_inicio.substring(0, 5);
+        const horaFin = horario.hora_fin.substring(0, 5);
+        const dia = horario.dia_semana;
+
+        // Encontrar la celda correspondiente
+        const cell = scheduleGrid.querySelector(
+            `.schedule-cell[data-dia="${dia}"][data-hora="${horaInicio}"]`
+        );
+
+        if (cell) {
+            cell.classList.add('occupied');
+
+            // Crear el elemento del horario
+            const div = document.createElement('div');
+            div.className = 'schedule-item';
+            div.innerHTML = `
+                <strong>${horario.grupo_nombre}</strong><br>
+                <small>${horario.materia_nombre}</small><br>
+                <small>${horario.aula_nombre} (${horario.aula_edificio})</small><br>
+                <small class="text-muted">${horario.profesor_nombre || 'Sin profesor'}</small>
+            `;
+
+            // Click para ver detalles
+            div.addEventListener('click', () => showHorarioDetails(horario));
+
+            cell.appendChild(div);
+        }
+    });
+}
+
+function renderHorariosTable() {
+    const tbody = document.getElementById('horariosTableBody');
+    if (!tbody) return;
+
+    if (horariosData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay horarios registrados</td></tr>';
         return;
     }
 
-    tbody.innerHTML = horarios.map(horario => `
-        <tr>
-            <td><strong>${horario.grupo_nombre}</strong></td>
+    tbody.innerHTML = '';
+
+    horariosData.forEach(horario => {
+        const tr = document.createElement('tr');
+
+        const horaInicio = horario.hora_inicio.substring(0, 5);
+        const horaFin = horario.hora_fin.substring(0, 5);
+
+        tr.innerHTML = `
+            <td>${horario.grupo_nombre}</td>
             <td>${horario.materia_nombre}</td>
-            <td>${horario.profesor_nombre}</td>
+            <td>${horario.profesor_nombre || '<span class="text-muted">Sin profesor</span>'}</td>
             <td>${horario.aula_nombre} (${horario.aula_edificio})</td>
             <td>${horario.dia_semana}</td>
-            <td>${formatTime(horario.hora_inicio)} - ${formatTime(horario.hora_fin)}</td>
+            <td>${horaInicio} - ${horaFin}</td>
             <td>
-                <div class="flex gap-1">
-                    <button class="btn btn-sm btn-danger" onclick="deleteHorario(${horario.id})" title="Eliminar">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                    </button>
-                </div>
+                <button class="btn btn-sm btn-danger" onclick="eliminarHorario(${horario.id})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
             </td>
-        </tr>
-    `).join('');
+        `;
+
+        tbody.appendChild(tr);
+    });
 }
 
-// Cargar horario visual
-async function loadSchedule() {
-    const grupo = document.getElementById('filterGrupo')?.value || '';
+// ========== MANEJO DE EVENTOS ==========
+
+async function handleFilterChange() {
+    showLoading();
+    await loadHorarios();
+    renderSchedule();
+    renderHorariosTable();
+    hideLoading();
+}
+
+async function handleGrupoChange(e) {
+    const grupoId = e.target.value;
+
+    if (!grupoId) {
+        clearFormValidation();
+        return;
+    }
+
+    // Buscar información del grupo
+    const grupo = gruposData.find(g => g.id == grupoId);
+
+    if (grupo) {
+        // Mostrar información del profesor
+        showProfesorInfo(grupo);
+
+        // Habilitar campos
+        document.getElementById('aula_id').disabled = false;
+        document.getElementById('dia_semana').disabled = false;
+        document.getElementById('hora_inicio').disabled = false;
+        document.getElementById('hora_fin').disabled = false;
+    }
+}
+
+async function showProfesorInfo(grupo) {
+    // Crear o actualizar div de información
+    let infoDiv = document.getElementById('profesor-info');
+
+    if (!infoDiv) {
+        infoDiv = document.createElement('div');
+        infoDiv.id = 'profesor-info';
+        infoDiv.className = 'alert alert-info mt-3';
+
+        const modalBody = document.querySelector('#modalHorario .modal-body');
+        modalBody.insertBefore(infoDiv, modalBody.firstChild);
+    }
+
+    const turnoLabel = grupo.profesor_turno === 'medio' ? 'Medio Tiempo (18-20 hrs/semana)' : 'Tiempo Completo (20-22 hrs/semana)';
+
+    infoDiv.innerHTML = `
+        <strong>Profesor:</strong> ${grupo.profesor_nombre}<br>
+        <strong>Turno:</strong> ${turnoLabel}<br>
+        <strong>Materia:</strong> ${grupo.materia_nombre}
+    `;
 
     try {
-        console.log('Cargando horario para el grupo:', grupo);
-        const response = await fetch(`../php/horarios_api.php?action=schedule&grupo=${grupo}`);
+        const response = await fetch(`../php/horarios_api.php?action=verificar_creditos&grupo_id=${grupo.id}`);
         const data = await response.json();
 
-        if (data.success) {
-            const horarios = data.data.map(h => {
-                return {
-                    ...h,
-                    hora_inicio: (h.hora_inicio || '').slice(0,5),
-                    hora_fin: (h.hora_fin || '').slice(0,5)
-                };
-            });
-            renderSchedule(horarios);
+        if (data.success && data.data) {
+            const turnoLabel = grupo.profesor_turno === 'medio'
+                ? 'Medio Tiempo (18-20 hrs/semana)'
+                : 'Tiempo Completo (20-22 hrs/semana)';
+
+            infoDiv.innerHTML = `
+                <strong>Profesor:</strong> ${grupo.profesor_nombre}<br>
+                <strong>Turno:</strong> ${turnoLabel}<br>
+                <strong>Materia:</strong> ${grupo.materia_nombre}<br>
+                <strong>Créditos:</strong> ${data.data.creditos} (${data.data.horas_maximas} horas/semana)<br>
+                <strong>Horas asignadas:</strong> ${data.data.horas_asignadas}/${data.data.horas_maximas}
+                ${data.data.horas_asignadas >= data.data.horas_maximas
+                ? '<br><span style="color: #d63031;">Ya tiene todas las horas asignadas</span>'
+                : ''}
+            `;
         }
     } catch (error) {
         console.error('Error:', error);
     }
 }
 
-// Renderizar horario visual
-function renderSchedule(horarios) {
-    // Limpiar todas las celdas
-    document.querySelectorAll('.schedule-cell').forEach(cell => {
-        cell.innerHTML = '';
-        cell.style.backgroundColor = '';
-    });
+async function handleHoraChange() {
+    const horaInicio = document.getElementById('hora_inicio').value;
 
-    // Renderizar cada horario
-    horarios.forEach(horario => {
-        const cells = document.querySelectorAll(`[data-dia="${horario.dia_semana}"][data-hora="${horario.hora_inicio}"]`);
-        
-        cells.forEach(cell => {
-            cell.innerHTML = `
-                <div class="schedule-class">
-                    <div class="schedule-class-name">${horario.materia_nombre}</div>
-                    <div class="schedule-class-info">
-                        ${horario.grupo_nombre}<br>
-                        ${horario.aula_nombre}<br>
-                        ${horario.profesor_nombre}
-                    </div>
-                </div>
-            `;
-        });
-    });
+    if (horaInicio) {
+        // Calcular automáticamente 1 hora después
+        const inicio = new Date(`2000-01-01T${horaInicio}`);
+        inicio.setHours(inicio.getHours() + 1);
+        const horaFin = inicio.toTimeString().substring(0, 5);
+
+        // Verificar que no exceda las 3 PM
+        if (horaFin <= '15:00') {
+            document.getElementById('hora_fin').value = horaFin;
+            // Deshabilitar el campo de hora fin para que no lo puedan modificar
+            document.getElementById('hora_fin').disabled = false;
+        } else {
+            showFormValidation('No se puede asignar una clase después de las 2:00 PM (terminaría después de las 3:00 PM)', 'error');
+            document.getElementById('hora_inicio').value = '';
+            return;
+        }
+    }
+
+    validateFormFields();
 }
 
-// Manejar envío de formulario
+async function validateFormFields() {
+    const grupoId = document.getElementById('grupo_id').value;
+    const aulaId = document.getElementById('aula_id').value;
+    const dia = document.getElementById('dia_semana').value;
+    const horaInicio = document.getElementById('hora_inicio').value;
+    const horaFin = document.getElementById('hora_fin').value;
+
+    // Limpiar mensajes anteriores
+    clearFormValidation();
+
+    if (!grupoId || !aulaId || !dia || !horaInicio || !horaFin) {
+        return;
+    }
+
+    // Validar horario institucional
+    if (horaInicio < HORA_INICIO_INSTITUCIONAL || horaFin > HORA_FIN_INSTITUCIONAL) {
+        showFormValidation('El horario debe estar entre 7:00 AM y 3:00 PM', 'error');
+        return;
+    }
+
+    if (horaInicio >= horaFin) {
+        showFormValidation('La hora de fin debe ser mayor que la hora de inicio', 'error');
+        return;
+    }
+
+    // Verificar disponibilidad
+    showFormValidation('Verificando disponibilidad...', 'info');
+
+    try {
+        const response = await fetch(
+            `../php/horarios_api.php?action=check_availability&grupo_id=${grupoId}&aula_id=${aulaId}&dia_semana=${dia}&hora_inicio=${horaInicio}&hora_fin=${horaFin}`
+        );
+        const data = await response.json();
+
+        if (data.success) {
+            showFormValidation('✓ Horario disponible', 'success');
+        } else {
+            let mensaje = 'Conflictos encontrados:\n';
+            data.data.conflictos.forEach(conflicto => {
+                mensaje += `• ${conflicto.mensaje}\n`;
+            });
+            showFormValidation(mensaje, 'warning');
+        }
+    } catch (error) {
+        console.error('Error al verificar disponibilidad:', error);
+        showFormValidation('Error al verificar disponibilidad', 'error');
+    }
+
+    // Verificar créditos de la materia
+    if (grupoId) {
+        try {
+            const response = await fetch(`../php/horarios_api.php?action=verificar_creditos&grupo_id=${grupoId}`);
+            const data = await response.json();
+
+            if (!data.success) {
+                showFormValidation(data.message, 'error');
+                return;
+            } else if (data.data && data.data.puede_agregar === false) {
+                showFormValidation(data.data.mensaje, 'warning');
+                // Deshabilitar botón guardar
+                const btnSubmit = document.querySelector('#formHorario button[type="submit"]');
+                if (btnSubmit) btnSubmit.disabled = true;
+                return;
+            }
+        } catch (error) {
+            console.error('Error al verificar créditos:', error);
+        }
+    }
+}
+
+function showFormValidation(mensaje, tipo) {
+    let validationDiv = document.getElementById('form-validation');
+
+    if (!validationDiv) {
+        validationDiv = document.createElement('div');
+        validationDiv.id = 'form-validation';
+
+        const modalBody = document.querySelector('#modalHorario .modal-body');
+        modalBody.appendChild(validationDiv);
+    }
+
+    const clases = {
+        'success': 'alert alert-success',
+        'error': 'alert alert-danger',
+        'warning': 'alert alert-warning',
+        'info': 'alert alert-info'
+    };
+
+    validationDiv.className = clases[tipo] || clases.info;
+    validationDiv.style.whiteSpace = 'pre-line';
+    validationDiv.textContent = mensaje;
+    validationDiv.style.display = 'block';
+}
+
+function clearFormValidation() {
+    const validationDiv = document.getElementById('form-validation');
+    if (validationDiv) {
+        validationDiv.style.display = 'none';
+    }
+
+    const profesorInfo = document.getElementById('profesor-info');
+    if (profesorInfo) {
+        profesorInfo.remove();
+    }
+}
+
 async function handleSubmitHorario(e) {
     e.preventDefault();
 
-    const form = e.target;
-    const formData = new FormData(form);
-    
-    const hora_inicio = formData.get('hora_inicio');
-    const hora_fin = formData.get('hora_fin');
-
-    // Validar que hora_fin sea mayor que hora_inicio
-    if (hora_inicio >= hora_fin) {
-        showAlert('La hora de fin debe ser mayor que la hora de inicio', 'error');
-        return;
-    }
-
-    formData.set('action', 'create');
+    const formData = new FormData(e.target);
+    formData.append('action', 'create');
 
     try {
-        const response = await fetch('../../php/horarios_api.php', {
+        showLoading(true);
+        const response = await fetch('../php/horarios_api.php', {
             method: 'POST',
             body: formData
         });
 
         const data = await response.json();
 
+        showLoading(false);
         if (data.success) {
-            showAlert(data.message, 'success');
+            notyf.success(data.message);
             closeModal('modalHorario');
-            loadHorarios();
-            loadSchedule();
-            form.reset();
+            e.target.reset();
+            clearFormValidation();
+            await loadHorarios();
+            renderSchedule();
+            renderHorariosTable();
         } else {
-            showAlert(data.message, 'error');
+            notyf.error(data.message);
         }
     } catch (error) {
         console.error('Error:', error);
-        showAlert('Error al guardar el horario', 'error');
+        notyf.error('Error al guardar el horario');
+    } finally {
+        showLoading(false);
     }
 }
 
-// Eliminar horario
-async function deleteHorario(id) {
-    if (!confirmDelete('¿Estás seguro de que deseas eliminar este horario?')) {
-        return;
-    }
+// ========== FUNCIONES AUXILIARES ==========
+
+function showHorarioDetails(horario) {
+    const horaInicio = horario.hora_inicio.substring(0, 5);
+    const horaFin = horario.hora_fin.substring(0, 5);
+
+    const mensaje = "Grupo: " + horario.grupo_nombre + "\n" +
+        "Materia: " + horario.materia_nombre + "\n" +
+        "Profesor: " + (horario.profesor_nombre || 'Sin profesor') + "\n" +
+        "Aula: " + horario.aula_nombre + " (Edificio " + horario.aula_edificio + ")\n" +
+        "Día: " + horario.dia_semana + "\n" +
+        "Horario: " + horaInicio + " - " + horaFin;
+
+    modalManager.openSuccess('Detalles del Horario', mensaje,null);
+}
+
+window.eliminarHorario = async function(id) {
+    const confirmado = await showConfirm(
+        '¿Estás seguro de eliminar este horario?',
+        'Esta acción no se puede deshacer'
+    );
+
+    if (!confirmado) return;
+
+    showLoading();
 
     try {
         const formData = new FormData();
         formData.append('action', 'delete');
         formData.append('id', id);
 
-        const response = await fetch('../../php/horarios_api.php', {
+        const response = await fetch('../php/horarios_api.php', {
             method: 'POST',
             body: formData
         });
@@ -264,13 +686,39 @@ async function deleteHorario(id) {
 
         if (data.success) {
             showAlert(data.message, 'success');
-            loadHorarios();
-            loadSchedule();
+            await loadHorarios();
+            renderSchedule();
+            renderHorariosTable();
         } else {
             showAlert(data.message, 'error');
         }
     } catch (error) {
         console.error('Error:', error);
         showAlert('Error al eliminar el horario', 'error');
+    } finally {
+        hideLoading();
     }
+};
+
+// Exponer funciones globales necesarias
+window.openModalHorario = function() {
+    // Limpiar formulario
+    const form = document.getElementById('formHorario');
+    if (form) form.reset();
+    clearFormValidation();
+
+    // Deshabilitar campos hasta seleccionar grupo
+    document.getElementById('aula_id').disabled = true;
+    document.getElementById('dia_semana').disabled = true;
+    document.getElementById('hora_inicio').disabled = true;
+    document.getElementById('hora_fin').disabled = true;
+
+    openModal('modalHorario');
+};
+
+async function showConfirm() {
+    return new Promise((resolve) => {
+        const confirmed = confirm(...arguments);
+        resolve(confirmed);
+    });
 }

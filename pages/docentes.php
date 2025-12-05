@@ -4,14 +4,22 @@ requireLogin();
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Docentes</title>
     <link rel="stylesheet" href="../css/styles-modal.css">
     <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/docente.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+
+
+    <!-- jspdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
+
 <body>
 <div class="dashboard">
     <?php include './components/sidebar.php'; ?>
@@ -35,7 +43,6 @@ requireLogin();
         </div>
 
         <div class="content-wrapper">
-            <div id="alertContainer"></div>
 
             <!-- Filtros -->
             <div class="card mb-3">
@@ -43,7 +50,7 @@ requireLogin();
                     <div class="flex gap-2">
                         <div class="form-group" style="flex: 1; margin-bottom: 0;">
                             <input type="text" id="searchInput" class="form-input"
-                                   placeholder="Buscar por nombre, email o RFC...">
+                                   placeholder="Buscar por nombre o RFC...">
                         </div>
                         <div class="form-group" style="width: 200px; margin-bottom: 0;">
                             <select id="filterActivo" class="form-input">
@@ -65,9 +72,9 @@ requireLogin();
                             <tr>
                                 <th>ID</th>
                                 <th>Nombre</th>
-                                <th>Email</th>
                                 <th>RFC</th>
                                 <th>Teléfono</th>
+                                <th>Turno</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
@@ -131,19 +138,13 @@ requireLogin();
                     </div>
                 </div>
 
-                <h3 class="sub-title">Datos para el Usuario</h3>
-
-                <div class="grid grid-2">
-                    <div class="form-group">
-                        <label class="form-label">Email</label>
-                        <input type="email" id="email" name="email" class="form-input"
-                               placeholder="Ingresa el correo electrónico" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Contraseña</label>
-                        <input type="password" id="password" name="password" class="form-input"
-                               placeholder="Ingresa la contraseña" required>
-                    </div>
+                <div class="form-group">
+                    <label class="form-label">Turno</label>
+                    <select id="turno" name="turno" class="form-input" required>
+                        <option value="">Seleccionar el turno</option>
+                        <option value="medio">Medio Tiempo</option>
+                        <option value="completo">Tiempo Completo</option>
+                    </select>
                 </div>
 
                 <h3 class="sub-title">Materias que puede impartir</h3>
@@ -170,7 +171,7 @@ requireLogin();
 
 <!-- Modal Horario Docente -->
 <div id="modalHorarioDocente" class="modal">
-    <div class="modal-content" style="max-width: 1200px;">
+    <div class="modal-content" style="max-width: 1400px; max-height: 90vh;">
         <div class="modal-header">
             <div class="content-title-modal">
                 <div class="ico-modal">
@@ -185,22 +186,73 @@ requireLogin();
             </div>
             <button class="modal-close" onclick="closeModal('modalHorarioDocente')">&times;</button>
         </div>
-        <div class="modal-body">
-            <div id="docenteInfo" class="mb-3"
-                 style="padding: 16px; background: var(--background); border-radius: 8px;">
+        <div class="modal-body" style="max-height: calc(90vh - 180px); overflow-y: auto;">
+            <!-- Información del Docente -->
+            <div id="docenteInfo" class="docente-info-card">
                 <!-- Info del docente se carga dinámicamente -->
             </div>
 
-            <!-- Grid de Horario -->
-            <div class="schedule-grid" id="scheduleGridDocente">
-                <div class="schedule-header">Hora</div>
-                <div class="schedule-header">Lunes</div>
-                <div class="schedule-header">Martes</div>
-                <div class="schedule-header">Miércoles</div>
-                <div class="schedule-header">Jueves</div>
-                <div class="schedule-header">Viernes</div>
+            <!-- Botones de Acción -->
+            <div class="horario-actions">
+                <button type="button" class="btn btn-success" onclick="exportarHorarioPDF()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Exportar PDF
+                </button>
+            </div>
 
-                <!-- Horarios de 7:00 AM a 3:00 PM (8 bloques) -->
+            <!-- Grid de Horario -->
+            <div class="horario-container" id="horarioContainerPrint">
+                <div class="horario-header-print" style="display: none;">
+                    <!-- Header para PDF/impresión -->
+                    <div class="header-logo">
+                        <h1>Tecnológico Nacional de México</h1>
+                        <h2>Campus Chilpancingo</h2>
+                    </div>
+                    <div class="header-info">
+                        <h3>Horario de Clases</h3>
+                        <p id="docenteNombrePrint"></p>
+                        <p id="periodoActual"></p>
+                    </div>
+                </div>
+
+                <div class="schedule-grid-wrapper">
+                    <table class="schedule-table" id="scheduleTableDocente">
+                        <thead>
+                        <tr>
+                            <th class="hora-column">Hora</th>
+                            <th>Lunes</th>
+                            <th>Martes</th>
+                            <th>Miércoles</th>
+                            <th>Jueves</th>
+                            <th>Viernes</th>
+                        </tr>
+                        </thead>
+                        <tbody id="scheduleBodyDocente">
+                        <!-- Horarios se cargan dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Leyenda -->
+                <div class="horario-leyenda">
+                    <div class="leyenda-item">
+                        <div class="leyenda-color" style="background: var(--primary-color);"></div>
+                        <span>Clase asignada</span>
+                    </div>
+                    <div class="leyenda-item">
+                        <div class="leyenda-color" style="background: #f8f9fa; border: 1px solid #dee2e6;"></div>
+                        <span>Hora libre</span>
+                    </div>
+                </div>
+
+                <!-- Resumen de Carga -->
+                <div class="horario-resumen" id="horarioResumen">
+                    <!-- Resumen se carga dinámicamente -->
+                </div>
             </div>
         </div>
         <div class="modal-footer">

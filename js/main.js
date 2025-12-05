@@ -2,7 +2,7 @@
 async function logout() {
     if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
         try {
-            const response = await fetch('../../php/auth.php', {
+            const response = await fetch('../php/auth.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -84,7 +84,6 @@ function closeModal(modalId) {
         hiddenInputs.forEach(input => input.value = '');
     }
 }
-
 
 // Cerrar modal al hacer clic fuera
 document.addEventListener('click', function(e) {

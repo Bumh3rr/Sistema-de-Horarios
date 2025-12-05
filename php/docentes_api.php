@@ -23,8 +23,42 @@ switch ($action) {
     case 'delete':
         deleteDocente();
         break;
+
+    case 'top':
+        topDocentes();
+        break;
     default:
         jsonResponse(false, 'Acción no válida');
+}
+
+function topDocentes()
+{
+    global $conn;
+    $limit = intval($_GET['limit'] ?? 5);
+
+    $sql = "SELECT d.id,
+                   CONCAT(d.nombre, ' ', d.apellido) AS nombre,
+                   COUNT(DISTINCT g.id) AS grupos,
+                   COALESCE(SUM(TIME_TO_SEC(TIMEDIFF(h.hora_fin, h.hora_inicio))/3600), 0) AS horas
+            FROM docente d
+            LEFT JOIN grupos g ON g.profesor_id = d.id
+            LEFT JOIN horarios h ON h.grupo_id = g.id
+            WHERE d.activo = 1
+            GROUP BY d.id
+            ORDER BY horas DESC, grupos DESC
+            LIMIT ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) jsonResponse(false, 'Error en la consulta: ' . $conn->error);
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $data = [];
+    while ($row = $result->fetch_assoc()) {
+        $row['grupos'] = (int)$row['grupos'];
+        $row['horas'] = (float)$row['horas'];
+        $data[] = $row;
+    }
+    jsonResponse(true, 'Top docentes obtenidos', $data);
 }
 
 function listDocentes()
@@ -35,11 +69,10 @@ function listDocentes()
     $activo = cleanInput($_GET['activo'] ?? '');
     $materia_id = cleanInput($_GET['materia_id'] ?? '');
 
-    $sql = "SELECT id, nombre, apellido, email, telefono, rfc, activo, fecha_registro 
-            FROM docente WHERE 1=1";
+    $sql = "SELECT * FROM docente WHERE 1=1";
 
     if ($search) {
-        $sql .= " AND (nombre LIKE '%$search%' OR apellido LIKE '%$search%' OR email LIKE '%$search%' OR rfc LIKE '%$search%')";
+        $sql .= " AND (nombre LIKE '%$search%' OR apellido LIKE '%$search%' OR rfc LIKE '%$search%')";
     }
 
     if ($activo !== '') {
@@ -73,73 +106,80 @@ function getDocente()
 {
     global $conn;
 
-    $id = cleanInput($_GET['id'] ?? '');
+    $id = $_GET['id'] ?? '';
 
     if (empty($id)) {
         jsonResponse(false, 'ID no proporcionado');
+        return;
     }
 
-    $sql = "SELECT id, nombre, apellido, email, password, telefono, rfc, activo FROM docente WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $id = intval($id);
+
+    $sql = "SELECT * FROM docente WHERE id = {$id}";
+    $result = $conn->query($sql);
 
     if ($result->num_rows === 0) {
         jsonResponse(false, 'Docente no encontrado');
+        return;
     }
+
     $docente = $result->fetch_assoc();
 
     // Obtener materias asignadas
-    $sql2 = "SELECT materia_id FROM docente_materias WHERE docente_id = ?";
-    $stmt2 = $conn->prepare($sql2);
-    $stmt2->bind_param("i", $id);
-    $stmt2->execute();
-    $res2 = $stmt2->get_result();
+    $sql_materias = "SELECT materia_id FROM docente_materias WHERE docente_id = {$id}";
+    $result_materias = $conn->query($sql_materias);
 
     $materias = [];
-    while ($row = $res2->fetch_assoc()) {
+    while ($row = $result_materias->fetch_assoc()) {
         $materias[] = $row['materia_id'];
     }
+
     $docente['materias'] = $materias;
-    jsonResponse(true, 'Docente obtenido exitosamente', $docente);
+
+    jsonResponse(true, 'Docente obtenido', $docente);
 }
 
 function getHorarioDocente()
 {
     global $conn;
 
-    $id = cleanInput($_GET['id'] ?? '');
+    $id = $_GET['id'] ?? '';
 
     if (empty($id)) {
         jsonResponse(false, 'ID no proporcionado');
+        return;
     }
 
-    $sql = "SELECT h.*, 
+    $id = intval($id);
+
+    $sql = "SELECT h.*,
             g.nombre as grupo_nombre,
+            g.id as grupo_id,
             m.nombre as materia_nombre,
+            m.codigo as materia_codigo,
+            m.creditos,
+            c.nombre as carrera_nombre,
             a.nombre as aula_nombre,
-            a.edificio as aula_edificio
+            a.edificio as aula_edificio,
+            a.tipo as aula_tipo
             FROM horarios h
             JOIN grupos g ON h.grupo_id = g.id
             JOIN materias m ON g.materia_id = m.id
+            JOIN carreras c ON m.carrera_id = c.id
             JOIN aulas a ON h.aula_id = a.id
-            WHERE g.profesor_id = ?
+            WHERE g.profesor_id = {$id}
             ORDER BY 
-              FIELD(h.dia_semana, 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'),
-              h.hora_inicio";
+                FIELD(h.dia_semana, 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'),
+                h.hora_inicio";
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
+    $result = $conn->query($sql);
     $horarios = [];
+
     while ($row = $result->fetch_assoc()) {
         $horarios[] = $row;
     }
 
-    jsonResponse(true, 'Horario obtenido exitosamente', $horarios);
+    jsonResponse(true, 'Horario obtenido', $horarios);
 }
 
 function createDocente()
@@ -148,34 +188,29 @@ function createDocente()
 
     $nombre = cleanInput($_POST['nombre'] ?? '');
     $apellido = cleanInput($_POST['apellido'] ?? '');
-    $email = cleanInput($_POST['email'] ?? '');
-    $password = cleanInput($_POST['password'] ?? '');
     $telefono = cleanInput($_POST['telefono'] ?? '');
     $rfc = cleanInput($_POST['rfc'] ?? '');
     $activo = cleanInput($_POST['activo'] ?? '1');
+    $turno = cleanInput($_POST['turno'] ?? '');
 
     // Validaciones
-    if (empty($nombre) || empty($apellido) || empty($email) || empty($password)) {
+    if (empty($nombre) || empty($apellido) || empty($turno)) {
         jsonResponse(false, 'Todos los campos obligatorios deben ser completados');
-    }
-    if (strlen($password) < 6) {
-        jsonResponse(false, 'La contraseña debe tener al menos 6 caracteres');
-    }
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        jsonResponse(false, 'El formato del email no es válido');
     }
     if (!empty($rfc) && strlen($rfc) !== 13) {
         jsonResponse(false, 'El RFC debe tener 13 caracteres');
     }
 
-    // Verificaciones de email / rfc (igual que antes)...
-    $sql = "SELECT id FROM docente WHERE email = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    if ($stmt->get_result()->num_rows > 0) {
-        jsonResponse(false, 'El email ya está registrado');
+    $horas_min = 0;
+    $horas_max = 0;
+    if ($turno === 'medio') {
+        $horas_min = 18;
+        $horas_max = 20;
+    } elseif ($turno === 'completo') {
+        $horas_min = 20;
+        $horas_max = 22;
     }
+
     if (!empty($rfc)) {
         $sql = "SELECT id FROM docente WHERE rfc = ?";
         $stmt = $conn->prepare($sql);
@@ -189,10 +224,10 @@ function createDocente()
     // Insertar docente
     $conn->begin_transaction();
     try {
-        $sql = "INSERT INTO docente (nombre, apellido, email, password, telefono, rfc, activo) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO docente (nombre, apellido, telefono, rfc, activo, turno, horas_min_semana, horas_max_semana) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssssssi", $nombre, $apellido, $email, $password, $telefono, $rfc, $activo);
+        $stmt->bind_param("ssssisii", $nombre, $apellido, $telefono, $rfc, $activo, $turno, $horas_min, $horas_max);
         if (!$stmt->execute()) {
             throw new Exception('Error al crear el docente');
         }
@@ -225,37 +260,28 @@ function updateDocente()
     $id = cleanInput($_POST['docente_id'] ?? '');
     $nombre = cleanInput($_POST['nombre'] ?? '');
     $apellido = cleanInput($_POST['apellido'] ?? '');
-    $email = cleanInput($_POST['email'] ?? '');
-    $password = cleanInput($_POST['password'] ?? '');
     $telefono = cleanInput($_POST['telefono'] ?? '');
     $rfc = cleanInput($_POST['rfc'] ?? '');
     $activo = cleanInput($_POST['activo'] ?? '1');
+    $turno = cleanInput($_POST['turno'] ?? '');
+
 
     // Validaciones
-    if (empty($id) || empty($nombre) || empty($apellido) || empty($email) || empty($password)) {
+    if (empty($id) || empty($nombre) || empty($apellido)) {
         jsonResponse(false, 'Todos los campos obligatorios deben ser completados');
     }
-
-    // validar password (mínimo 6 caracteres)
-    if (strlen($password) < 6) {
-        jsonResponse(false, 'La contraseña debe tener al menos 6 caracteres');
-    }
-
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        jsonResponse(false, 'El formato del email no es válido');
-    }
-
     if (!empty($rfc) && strlen($rfc) !== 13) {
         jsonResponse(false, 'El RFC debe tener 13 caracteres');
     }
 
-    // Verificar si el email ya existe (excluyendo el docente actual)
-    $sql = "SELECT id FROM docente WHERE email = ? AND id != ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("si", $email, $id);
-    $stmt->execute();
-    if ($stmt->get_result()->num_rows > 0) {
-        jsonResponse(false, 'El email ya está registrado por otro docente');
+    $horas_min = 0;
+    $horas_max = 0;
+    if ($turno === 'medio') {
+        $horas_min = 18;
+        $horas_max = 20;
+    } elseif ($turno === 'completo') {
+        $horas_min = 20;
+        $horas_max = 22;
     }
 
     // Verificar si el RFC ya existe (excluyendo el docente actual)
@@ -272,9 +298,9 @@ function updateDocente()
     // Iniciar transacción para actualizar docente y materias
     $conn->begin_transaction();
     try {
-        $sql = "UPDATE docente SET nombre = ?, apellido = ?, email = ?, password = ?, telefono = ?, rfc = ?, activo = ? WHERE id = ?";
+        $sql = "UPDATE docente SET nombre = ?, apellido = ?, telefono = ?, rfc = ?, activo = ?, turno = ?, horas_min_semana = ?, horas_max_semana = ? WHERE id = ?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssssssii", $nombre, $apellido, $email, $password, $telefono, $rfc, $activo, $id);
+        $stmt->bind_param("ssssisiii", $nombre, $apellido, $telefono, $rfc, $activo, $turno, $horas_min, $horas_max, $id);
         if (!$stmt->execute()) {
             throw new Exception('Error al actualizar el docente');
         }
@@ -312,13 +338,6 @@ function deleteDocente()
     if (empty($id)) {
         jsonResponse(false, 'ID no proporcionado');
     }
-
-    // Obtener info del docente antes de eliminar
-    $sql = "SELECT nombre, apellido, email FROM docente WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $docente = $stmt->get_result()->fetch_assoc();
 
     // Eliminar docente
     $sql = "DELETE FROM docente WHERE id = ?";

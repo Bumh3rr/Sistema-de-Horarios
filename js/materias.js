@@ -9,33 +9,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Búsqueda
     const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce(function () {
-            loadMaterias();
-        }, 550));
-    }
+    searchInput.addEventListener('input', debounce(function () {
+        loadMaterias();
+    }, 550));
 
     // Filtros
     const filterCarrera = document.getElementById('filterCarrera');
     const filterSemestre = document.getElementById('filterSemestre');
-
-    if (filterCarrera) {
-        filterCarrera.addEventListener('change', function () {
-            loadMaterias();
-        });
-    }
-
-    if (filterSemestre) {
-        filterSemestre.addEventListener('change', function () {
-            loadMaterias();
-        });
-    }
+    filterCarrera.addEventListener('change', function () {
+        loadMaterias();
+    });
+    filterSemestre.addEventListener('change', function () {
+        loadMaterias();
+    });
 
     // Formulario de materia
     const formMateria = document.getElementById('formMateria');
-    if (formMateria) {
-        formMateria.addEventListener('submit', handleSubmitMateria);
-    }
+    formMateria.addEventListener('submit', handleSubmitMateria);
 });
 
 // Cargar carreras para el select y filtro
@@ -55,7 +45,61 @@ async function loadCarrerasSelect() {
                 selectModal.appendChild(option.cloneNode(true));
                 if (selectFiltro) selectFiltro.appendChild(option);
             });
+
+            selectFiltro.addEventListener('change', async () => {
+                await loadSemestreSelectFilter(selectFiltro.value);
+                loadMaterias();
+            });
         }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+// Cargar los semestres para filtrar
+async function loadSemestreSelectFilter(idCarrara = '') {
+    const select = document.getElementById('filterSemestre');
+    if (idCarrara === '') {
+        select.innerHTML = '<option value="">Todos los semestres</option>';
+        select.value = "";
+        return;
+    }
+
+    const nombre_semestre = {
+        1: "1er",
+        2: "2do",
+        3: "3er",
+        4: "4to",
+        5: "5to",
+        6: "6to",
+        7: "7mo",
+        8: "8vo",
+        9: "9no",
+        10: "10mo",
+        11: "11",
+        12: "12",
+        13: "13",
+        14: "14",
+        15: "15",
+        16: "16"
+    };
+    try {
+        const url = `../php/carreras_api.php?action=get&id=${idCarrara}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            const size = data.data.duracion_semestres;
+
+            select.innerHTML = '<option value="">Todos los semestres</option>';
+            for (let i = 1; i <= size; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = nombre_semestre[i] + " Semestre";
+                select.appendChild(option);
+            }
+        }
+
     } catch (error) {
         console.error('Error:', error);
     }

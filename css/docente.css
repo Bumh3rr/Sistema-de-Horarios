@@ -1,0 +1,369 @@
+.docente-info-card {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 24px;
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px rgba(80, 70, 229, 0.3);
+}
+
+.docente-info-card h4 {
+    margin: 0 0 12px 0;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.docente-info-card p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.95;
+    line-height: 1.6;
+}
+
+.docente-info-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.info-stat {
+    text-align: center;
+}
+
+.info-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    display: block;
+}
+
+.info-stat-label {
+    font-size: 12px;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Botones de Acción */
+.horario-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    justify-content: end;
+}
+
+/* Contenedor del Horario */
+.horario-container {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+}
+
+.schedule-grid-wrapper {
+    overflow-x: auto;
+    margin-bottom: 24px;
+}
+
+/* Tabla de Horario */
+.schedule-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 14px;
+}
+
+.schedule-table thead th {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 16px 12px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.schedule-table thead th:first-child {
+    border-radius: var(--radius-sm) 0 0 0;
+}
+
+.schedule-table thead th:last-child {
+    border-radius: 0 var(--radius-sm) 0 0;
+}
+
+.schedule-table thead th.hora-column {
+    width: 120px;
+    min-width: 120px;
+}
+
+.schedule-table tbody tr {
+    transition: var(--transition);
+}
+
+.schedule-table tbody tr:hover {
+    background: var(--background);
+}
+
+.schedule-table tbody td {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    vertical-align: top;
+    min-height: 80px;
+    position: relative;
+}
+
+.schedule-table tbody td.hora-cell {
+    background: var(--background);
+    font-weight: 600;
+    text-align: center;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.schedule-table tbody td.empty-cell {
+    background: var(--surface);
+}
+
+/* Clase en el Horario */
+.schedule-class {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    min-height: 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(80, 70, 229, 0.3);
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.schedule-class:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(80, 70, 229, 0.4);
+}
+
+.schedule-class-header {
+    margin-bottom: 8px;
+}
+
+.schedule-class-name {
+    font-size: 14px;
+    font-weight: 550;
+    margin-bottom: 4px;
+    line-height: 1.3;
+    color: white;
+}
+
+.schedule-class-grupo {
+    font-size: 12px;
+    opacity: 0.9;
+    font-weight: 600;
+}
+
+.schedule-class-body {
+    font-size: 12px;
+    opacity: 0.95;
+    line-height: 1.5;
+}
+
+.schedule-class-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.schedule-class-info svg {
+    width: 14px;
+    height: 14px;
+    stroke: white;
+    flex-shrink: 0;
+}
+
+/* Leyenda */
+.horario-leyenda {
+    display: flex;
+    gap: 24px;
+    padding: 16px;
+    background: var(--background);
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.leyenda-color {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+}
+
+.leyenda-item span {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Resumen de Carga */
+.horario-resumen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 20px;
+    background: var(--background);
+    border-radius: var(--radius);
+}
+
+.resumen-item {
+    background: var(--surface);
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.resumen-item-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary-color);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.resumen-item-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Estilos para Impresión */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #horarioContainerPrint,
+    #horarioContainerPrint * {
+        visibility: visible;
+    }
+
+    #horarioContainerPrint {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 20px;
+    }
+
+    .horario-header-print {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-color);
+    }
+
+    .header-logo h1 {
+        font-size: 24px;
+        margin: 0;
+        color: #2d3436;
+    }
+
+    .header-logo h2 {
+        font-size: 18px;
+        margin: 5px 0;
+        color: #636e72;
+    }
+
+    .header-info h3 {
+        font-size: 20px;
+        margin: 15px 0 5px 0;
+        color: var(--primary-color);
+    }
+
+    .header-info p {
+        margin: 3px 0;
+        font-size: 14px;
+        color: #495057;
+    }
+
+    .horario-actions,
+    .modal-footer,
+    .modal-close {
+        display: none !important;
+    }
+
+    .schedule-table {
+        page-break-inside: avoid;
+    }
+
+    .schedule-class {
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid var(--primary-color);
+    }
+
+    .docente-info-card {
+        background: white !important;
+        color: black !important;
+        border: 2px solid var(--primary-color);
+        box-shadow: none;
+    }
+
+    .horario-resumen {
+        page-break-before: avoid;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .schedule-table {
+        font-size: 12px;
+    }
+
+    .schedule-table thead th {
+        padding: 12px 8px;
+        font-size: 12px;
+    }
+
+    .schedule-table tbody td {
+        padding: 8px;
+    }
+
+    .schedule-class {
+        padding: 8px;
+        min-height: 60px;
+    }
+
+    .schedule-class-name {
+        font-size: 12px;
+    }
+
+    .schedule-class-grupo,
+    .schedule-class-body {
+        font-size: 11px;
+    }
+
+    .horario-actions {
+        flex-direction: column;
+    }
+
+    .horario-actions button {
+        width: 100%;
+    }
+}

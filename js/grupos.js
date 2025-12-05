@@ -2,24 +2,47 @@ import {showLoading, notyf} from './notify/Config.js';
 import {ModalManager} from './utils/ModalManager.js';
 
 const modalManager = new ModalManager();
-// Gestión de Grupos
+
 document.addEventListener('DOMContentLoaded', function () {
     loadGrupos();
+    loadCarrerasSelect();
     loadMateriasSelect();
-    loadProfesoresSelect();
 
     const formGrupo = document.getElementById('formGrupo');
     if (formGrupo) {
         formGrupo.addEventListener('submit', handleSubmitGrupo);
     }
+
+    // Búsqueda
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(function () {
+            loadGrupos();
+        }, 550));
+    }
+
+    // Filtros
+    const filterCarrera = document.getElementById('filterCarrera');
+    const filterSemestre = document.getElementById('filterSemestre');
+    filterCarrera.addEventListener('change', function () {
+        loadGrupos();
+    });
+    filterSemestre.addEventListener('change', function () {
+        loadGrupos();
+    });
 });
 
 async function loadGrupos() {
     const tbody = document.getElementById('gruposTableBody');
+    const search = document.getElementById('searchInput')?.value || '';
+    const carrera = document.getElementById('filterCarrera')?.value || '';
+    const semestre = document.getElementById('filterSemestre')?.value || '';
 
     try {
-        const response = await fetch('../php/grupos_api.php?action=list');
+        showLoading(true);
+        const response = await fetch(`../php/grupos_api.php?action=list&search=${encodeURIComponent(search)}&carrera=${carrera}&semestre=${semestre}`);
         const data = await response.json();
+        showLoading(false);
 
         if (data.success) {
             renderGrupos(data.data);
@@ -29,6 +52,143 @@ async function loadGrupos() {
     } catch (error) {
         console.error('Error:', error);
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">Error al cargar grupos</td></tr>';
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Cargar carreras para el select y filtro
+async function loadCarrerasSelect() {
+    try {
+        const response = await fetch('../php/carreras_api.php?action=list');
+        const data = await response.json();
+
+        if (data.success) {
+            const selectFiltro = document.getElementById('filterCarrera');
+            const selectModal = document.getElementById('carrera_id');
+            data.data.forEach(carrera => {
+                const option = document.createElement('option');
+                option.value = carrera.id;
+                option.textContent = carrera.nombre;
+                selectModal.appendChild(option.cloneNode(true));
+                selectFiltro.appendChild(option);
+            });
+
+            selectFiltro.addEventListener('change', async () => {
+                await loadSemestreSelectFilter(selectFiltro.value);
+                loadGrupos();
+            });
+
+            selectModal.addEventListener('change', () => {
+                loadSemestreSelectModal(selectModal.value);
+                loadMateriasSelect(selectModal.value, '');
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+// Cargar los semestres para filtrar
+async function loadSemestreSelectFilter(idCarrara = '') {
+    const select = document.getElementById('filterSemestre');
+    if (idCarrara === '') {
+        select.innerHTML = '<option value="">Todos los semestres</option>';
+        select.value = "";
+        return;
+    }
+
+    const nombre_semestre = {
+        1: "1er",
+        2: "2do",
+        3: "3er",
+        4: "4to",
+        5: "5to",
+        6: "6to",
+        7: "7mo",
+        8: "8vo",
+        9: "9no",
+        10: "10mo",
+        11: "11",
+        12: "12",
+        13: "13",
+        14: "14",
+        15: "15",
+        16: "16"
+    };
+    try {
+        const url = `../php/carreras_api.php?action=get&id=${idCarrara}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            const size = data.data.duracion_semestres;
+
+            select.innerHTML = '<option value="">Todos los semestres</option>';
+            for (let i = 1; i <= size; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = nombre_semestre[i] + " Semestre";
+                select.appendChild(option);
+            }
+        }
+
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+// Cargar los semestres para filtrar
+async function loadSemestreSelectModal(idCarrara = '') {
+    const select = document.getElementById('semestre_actual');
+    if (idCarrara === '') {
+        select.innerHTML = '<option value="">Selecciona la carrera ...</option>';
+        select.value = "";
+        return;
+    }
+
+    const nombre_semestre = {
+        1: "1er",
+        2: "2do",
+        3: "3er",
+        4: "4to",
+        5: "5to",
+        6: "6to",
+        7: "7mo",
+        8: "8vo",
+        9: "9no",
+        10: "10mo",
+        11: "11",
+        12: "12",
+        13: "13",
+        14: "14",
+        15: "15",
+        16: "16"
+    };
+    try {
+        const url = `../php/carreras_api.php?action=get&id=${idCarrara}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            const size = data.data.duracion_semestres;
+
+            select.innerHTML = '<option value="">Todos los semestres</option>';
+            for (let i = 1; i <= size; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = nombre_semestre[i] + " Semestre";
+                select.appendChild(option);
+            }
+
+            const selectCarrera = document.getElementById('carrera_id');
+            select.addEventListener('change', () => {
+                loadMateriasSelect(selectCarrera.value, select.value);
+            });
+        }
+
+    } catch (error) {
+        console.error('Error:', error);
     }
 }
 
@@ -38,6 +198,11 @@ function renderGrupos(grupos) {
     if (grupos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">No se encontraron grupos</td></tr>';
         return;
+    }
+    const construirDateTime = (dateString) => {
+        const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) return 'Fecha no disponible';
+        return date.toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' });
     }
 
     tbody.innerHTML = grupos.map(grupo => `
@@ -51,6 +216,9 @@ function renderGrupos(grupos) {
         </td>
             <td>${grupo.num_estudiantes} / ${grupo.cupo_maximo}</td>
             <td>${grupo.periodo_academico}</td>
+            <td>
+                ${construirDateTime(grupo.fecha_creacion)}
+            </td>
             <td>
                 <div class="flex gap-1">
                     <button class="btn btn-sm btn-secondary" onclick="editGrupo(${grupo.id})" title="Editar">
@@ -71,24 +239,28 @@ function renderGrupos(grupos) {
     `).join('');
 }
 
-async function loadMateriasSelect() {
+async function loadMateriasSelect(idCarrera = '', semestre = '') {
     try {
-        const response = await fetch('../php/materias_api.php?action=list');
+        const response = await fetch(`../php/materias_api.php?action=list&carrera=${idCarrera}&semestre=${semestre}`);
         const data = await response.json();
 
         if (data.success) {
+            let duracion = 0;
             const select = document.getElementById('materia_id');
             select.innerHTML = '<option value="">Seleccionar...</option>';
+
             data.data.forEach(materia => {
                 const option = document.createElement('option');
                 option.value = materia.id;
                 option.textContent = `${materia.nombre} (${materia.codigo})`;
+                duracion = materia.duracion;
                 select.appendChild(option);
             });
 
             // Cuando cambie la materia, recargar profesores filtrados
             select.addEventListener('change', () => {
                 loadProfesoresSelect(select.value);
+                loadSemestreSelect(duracion);
             });
         }
     } catch (error) {
@@ -102,8 +274,8 @@ async function loadProfesoresSelect(materiaId = '') {
         const response = await fetch(url);
         const data = await response.json();
 
-        const select = document.getElementById('profesor_id');
         // reset opciones
+        const select = document.getElementById('profesor_id');
         select.innerHTML = '<option value="">Seleccionar...</option>';
 
         if (data.success) {
@@ -114,6 +286,40 @@ async function loadProfesoresSelect(materiaId = '') {
                 select.appendChild(option);
             });
         }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function loadSemestreSelect(size = 0) {
+    const nombre_semestre = {
+        1: "1er",
+        2: "2do",
+        3: "3er",
+        4: "4to",
+        5: "5to",
+        6: "6to",
+        7: "7mo",
+        8: "8vo",
+        9: "9no",
+        10: "10mo",
+        11: "11",
+        12: "12",
+        13: "13",
+        14: "14",
+        15: "15",
+        16: "16"
+    };
+    try {
+        const select = document.getElementById('semestre_actual');
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        for (let i = 1; i <= size; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = nombre_semestre[i] + " Semestre";
+            select.appendChild(option);
+        }
+
     } catch (error) {
         console.error('Error:', error);
     }
@@ -190,7 +396,7 @@ window.editGrupo = async (id) => {
             document.getElementById('profesor_id').value = grupo.profesor_id;
             document.getElementById('nombre').value = grupo.nombre;
             document.getElementById('cupo_maximo').value = grupo.cupo_maximo;
-            document.getElementById('num_alumnos').value = grupo.alumnos_inscriptos;
+            document.getElementById('alumnos_inscriptos').value = grupo.alumnos_inscriptos;
             document.getElementById('semestre_actual').value = grupo.semestre_actual;
             document.getElementById('periodo_academico').value = grupo.periodo_academico;
 

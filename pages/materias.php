@@ -52,15 +52,6 @@ requireLogin();
                         <div class="form-group" style="margin-bottom: 0;">
                             <select id="filterSemestre" class="form-input">
                                 <option value="">Todos los semestres</option>
-                                <option value="1">1er Semestre</option>
-                                <option value="2">2do Semestre</option>
-                                <option value="3">3er Semestre</option>
-                                <option value="4">4to Semestre</option>
-                                <option value="5">5to Semestre</option>
-                                <option value="6">6to Semestre</option>
-                                <option value="7">7mo Semestre</option>
-                                <option value="8">8vo Semestre</option>
-                                <option value="9">9no Semestre</option>
                             </select>
                         </div>
                     </div>

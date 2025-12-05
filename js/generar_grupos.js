@@ -5,36 +5,27 @@ const modalManager = new ModalManager();
 
 document.addEventListener('DOMContentLoaded', function () {
     loadMaterias();
+    loadCarrerasSelect();
 
     // Búsqueda
     const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce(function () {
-            loadMaterias();
-        }, 550));
-    }
+    searchInput.addEventListener('input', debounce(function () {
+        loadMaterias();
+    }, 550));
 
     // Filtros
     const filterCarrera = document.getElementById('filterCarrera');
     const filterSemestre = document.getElementById('filterSemestre');
-
-    if (filterCarrera) {
-        filterCarrera.addEventListener('change', function () {
-            loadMaterias();
-        });
-    }
-
-    if (filterSemestre) {
-        filterSemestre.addEventListener('change', function () {
-            loadMaterias();
-        });
-    }
+    filterCarrera.addEventListener('change', function () {
+        loadMaterias();
+    });
+    filterSemestre.addEventListener('change', function () {
+        loadMaterias();
+    });
 
     // Formulario de materia
     const formMateria = document.getElementById('formAgregarAlumnos');
-    if (formMateria) {
-        formMateria.addEventListener('submit', handleSubmitMateria);
-    }
+    formMateria.addEventListener('submit', handleSubmitMateria);
 });
 
 // Cargar materias
@@ -63,6 +54,80 @@ async function loadMaterias() {
     }
 }
 
+// Cargar carreras para el select y filtro
+async function loadCarrerasSelect() {
+    try {
+        const response = await fetch('../php/carreras_api.php?action=list');
+        const data = await response.json();
+
+        if (data.success) {
+            const selectFiltro = document.getElementById('filterCarrera');
+            data.data.forEach(carrera => {
+                const option = document.createElement('option');
+                option.value = carrera.id;
+                option.textContent = carrera.nombre;
+                selectFiltro.appendChild(option);
+            });
+
+            selectFiltro.addEventListener('change', async () => {
+                await loadSemestreSelectFilter(selectFiltro.value);
+                loadMaterias();
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+// Cargar los semestres para filtrar
+async function loadSemestreSelectFilter(idCarrara = '') {
+    const select = document.getElementById('filterSemestre');
+    if (idCarrara === '') {
+        select.innerHTML = '<option value="">Todos los semestres</option>';
+        select.value = "";
+        return;
+    }
+
+    const nombre_semestre = {
+        1: "1er",
+        2: "2do",
+        3: "3er",
+        4: "4to",
+        5: "5to",
+        6: "6to",
+        7: "7mo",
+        8: "8vo",
+        9: "9no",
+        10: "10mo",
+        11: "11",
+        12: "12",
+        13: "13",
+        14: "14",
+        15: "15",
+        16: "16"
+    };
+    try {
+        const url = `../php/carreras_api.php?action=get&id=${idCarrara}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            const size = data.data.duracion_semestres;
+
+            select.innerHTML = '<option value="">Todos los semestres</option>';
+            for (let i = 1; i <= size; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = nombre_semestre[i] + " Semestre";
+                select.appendChild(option);
+            }
+        }
+
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
 // Renderizar materias en tabla
 function renderMaterias(materias) {
     const tbody = document.getElementById('materiasTableBody');
@@ -80,12 +145,7 @@ function renderMaterias(materias) {
             <td>${materia.semestre}° Sem</td>
             <td>${materia.creditos}</td>
             <td>
-                <span class="badge badge-${materia.alumnos_inscriptos == 1 ? 'success' : 'error'}">
-                    ${materia.alumnos_inscriptos == 1 ? 'Grupos Generados' : 'No hay Grupos Generados'}
-                </span>
-            </td>
-            <td>
-                <button class="btn btn-primary" onclick="agregarAlumnos(${materia.id})" title="agregar"  ${materia.alumnos_inscriptos === 1 ? 'disabled' : ''}>
+                <button class="btn btn-primary" onclick="agregarAlumnos(${materia.id})" title="agregar">
                     <div style="display: flex; flex-flow: row wrap; align-items: center; justify-content: center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M15 8A5 5 0 1 0 5 8a5 5 0 0 0 10 0m2.5 13v-7M14 17.5h7"/><path d="M3 20a7 7 0 0 1 11-5.745"/></g></svg>
                             <p style="font-size: 11px;">Generar Grupos</p>
@@ -102,7 +162,7 @@ async function handleSubmitMateria(e) {
 
     const form = e.target;
     const formData = new FormData(form);
-    const action =  'create';
+    const action = 'generar';
 
     // Validaciones
     const numero_alumnos = parseInt(formData.get('numero_alumnos'));
@@ -132,7 +192,7 @@ async function handleSubmitMateria(e) {
 async function save(formData, form, action) {
     try {
         showLoading(true);
-        const response = await fetch(`../php/alumnos_api.php?action=${action}`, {
+        const response = await fetch(`../php/grupos_api.php?action=${action}`, {
             method: 'POST',
             body: formData
         });
@@ -235,6 +295,30 @@ function mostrarModalGruposGenerados(response) {
     openModal('modal-info-generated');
 }
 
+async function updateMateriaDetalle({nombre, semestre, carrera, carreraId}) {
+    const nombreEl = document.getElementById('detalleMateriaNombre');
+    const semestreEl = document.getElementById('detalleMateriaSemestre');
+    const carreraEl = document.getElementById('detalleMateriaCarrera');
+
+    let carreraNombre = carrera || '';
+
+    if (!carreraNombre && carreraId) {
+        try {
+            const response = await fetch(`../php/carreras_api.php?action=get&id=${carreraId}`);
+            const data = await response.json();
+            if (data.success && data.data?.nombre) {
+                carreraNombre = data.data.nombre;
+            }
+        } catch (error) {
+            console.error('Error al obtener la carrera:', error);
+        }
+    }
+
+    nombreEl.textContent = nombre || 'Sin información';
+    semestreEl.textContent = semestre ? `${semestre}° Semestre` : 'Sin semestre';
+    carreraEl.textContent = carreraNombre || 'Sin carrera';
+}
+
 // Editar materia
 window.agregarAlumnos = async (id) => {
     try {
@@ -248,6 +332,13 @@ window.agregarAlumnos = async (id) => {
 
             document.getElementById('materia_id').value = materia.id;
             document.getElementById('semestre_actual').value = materia.semestre;
+
+            await updateMateriaDetalle({
+                nombre: materia.nombre,
+                semestre: materia.semestre,
+                carrera: materia.carrera_nombre,
+                carreraId: materia.carrera_id
+            });
 
             openModal('modalAgregarAlumnos');
         } else {
