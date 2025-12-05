@@ -34,8 +34,8 @@ async function loadAllData() {
     try {
         const [horarios, docentes, materias, aulas, grupos, carreras] = await Promise.all([
             fetchAPI('../php/horarios_api.php?action=list'),
-            fetchAPI('../php/docentes_api.php?action=top'),
-            fetchAPI('../php/materias_api.php?action=top'),
+            fetchAPI('../php/docentes_api.php?action=list'),
+            fetchAPI('../php/materias_api.php?action=list'),
             fetchAPI('../php/aulas_api.php?action=list'),
             fetchAPI('../php/grupos_api.php?action=list'),
             fetchAPI('../php/carreras_api.php?action=list')
@@ -68,10 +68,9 @@ function renderStats() {
 
     // Docentes
     const docentesActivos = dashboardData.docentes.filter(d => d.activo == 1).length;
-    const docentesConHorario = new Set(dashboardData.horarios.map(h => h.profesor_id)).size;
     animateValue('totalDocentes', 0, docentesActivos, 1000);
     animateValue('docentesActivos', 0, docentesActivos, 1000);
-    document.getElementById('docentesConHorario').textContent = docentesConHorario;
+    document.getElementById('docentesConHorario').textContent = "";
 
     // Materias
     const totalMaterias = dashboardData.materias.length;
@@ -314,7 +313,7 @@ function loadTopDocentes(limit = 5) {
             resp.data.forEach(d => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `<td>${escapeHtml(d.nombre)}</td>
-                                <td>${d.grupos}</td>
+                                <td>${d.turno}</td>
                                 <td>${Number(d.horas).toFixed(2)}</td>`;
                 tbody.appendChild(tr);
             });

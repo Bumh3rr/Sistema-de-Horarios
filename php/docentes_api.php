@@ -41,6 +41,7 @@ function topDocentes()
     $sql = "SELECT d.id,
                    CONCAT(d.nombre, ' ', d.apellido) AS nombre,
                    COUNT(DISTINCT g.id) AS grupos,
+                   d.turno AS turno,
                    COALESCE(SUM(TIME_TO_SEC(TIMEDIFF(h.hora_fin, h.hora_inicio))/3600), 0) AS horas
             FROM docente d
             LEFT JOIN grupos g ON g.profesor_id = d.id
