@@ -261,6 +261,63 @@ requireLogin();
     </div>
 </div>
 
+<!-- Modal QR Docente -->
+<div id="modalQRDocente" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <div class="content-title-modal">
+                <div class="ico-modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5046e5" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                </div>
+                <h3 class="modal-title" id="modalQRDocenteTitle">Código QR del Docente</h3>
+            </div>
+            <button class="modal-close" onclick="closeModal('modalQRDocente')">&times;</button>
+        </div>
+        <div class="modal-body" style="text-align: center; padding: 40px 24px;">
+            <!-- Información del docente -->
+            <div id="qrDocenteInfo" style="margin-bottom: 24px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 20px; color: var(--text-primary);"></h4>
+                <p style="margin: 0; color: var(--text-secondary); font-size: 14px;"></p>
+            </div>
+
+            <!-- QR Code -->
+            <div id="qrCodeContainer" style="display: flex; justify-content: center; margin: 24px 0;">
+                <div id="qrcode" style="padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+            </div>
+
+            <!-- Instrucciones -->
+            <div style="background: var(--background); padding: 16px; border-radius: 8px; margin-top: 24px; text-align: left;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
+                    Escanea este código QR para:
+                </p>
+                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: var(--text-secondary);">
+                    <li>Ver información del docente</li>
+                    <li>Consultar su horario de clases</li>
+                    <li>Acceder desde cualquier dispositivo</li>
+                </ul>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modalQRDocente')">Cerrar</button>
+            <button type="button" class="btn btn-primary" onclick="descargarQR()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Descargar QR
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Librería QRCode.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
 <script src="../js/main.js"></script>
 <script type="module" src="../js/docentes.js"></script>
