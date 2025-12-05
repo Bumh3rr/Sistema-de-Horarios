@@ -179,6 +179,14 @@ function renderDocentes(docentes) {
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
                     </button>
+                    <button class="btn btn-sm btn-success" onclick="mostrarQRDocente(${docente.id})" title="Código QR">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                    </button>
                     <button class="btn btn-sm btn-secondary" onclick="editDocente(${docente.id})" title="Editar">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -709,5 +717,159 @@ window.exportarHorarioPDF = async () => {
         notyf.error('Error al generar el PDF');
     } finally {
         showLoading(false);
+    }
+};
+
+
+let currentQRDocente = null;
+let qrCodeInstance = null;
+
+/**
+ * Mostrar modal QR del docente
+ */
+window.mostrarQRDocente = async (id) => {
+    try {
+        showLoading(true);
+
+        // Obtener datos del docente
+        const response = await fetch(`../php/docentes_api.php?action=get&id=${id}`);
+        const data = await response.json();
+
+        if (!data.success) {
+            notyf.error('Error al cargar datos del docente');
+            return;
+        }
+
+        const docente = data.data;
+        currentQRDocente = docente;
+
+        // Actualizar información del modal
+        const infoContainer = document.querySelector('#qrDocenteInfo h4');
+        const infoSubtext = document.querySelector('#qrDocenteInfo p');
+
+        infoContainer.textContent = `${docente.nombre} ${docente.apellido}`;
+        infoSubtext.innerHTML = `
+            <strong>RFC:</strong> ${docente.rfc || 'N/A'} | 
+            <strong>Turno:</strong> ${docente.turno === 'medio' ? 'Medio Tiempo' : 'Tiempo Completo'}
+        `;
+
+        // Actualizar título
+        document.getElementById('modalQRDocenteTitle').textContent =
+            `Código QR - ${docente.nombre} ${docente.apellido}`;
+
+        // Generar QR
+        generarQRDocente(docente);
+
+        // Abrir modal
+        openModal('modalQRDocente');
+
+    } catch (error) {
+        console.error('Error:', error);
+        notyf.error('Error al generar código QR');
+    } finally {
+        showLoading(false);
+    }
+};
+
+/**
+ * Generar código QR
+ */
+function generarQRDocente(docente) {
+    const container = document.getElementById('qrcode');
+
+    // Limpiar QR anterior
+    container.innerHTML = '';
+
+    // Crear URL con información del docente
+    // La URL apuntará a una página que muestre el horario del docente
+    const baseUrl = window.location.origin + window.location.pathname.replace('/pages/docentes.php', '');
+    const qrUrl = `${baseUrl}/pages/horario_docente_publico.php?id=${docente.id}`;
+
+    // Generar QR con QRCode.js
+    qrCodeInstance = new QRCode(container, {
+        text: qrUrl,
+        width: 256,
+        height: 256,
+        colorDark: "#5046e5",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+}
+
+/**
+ * Descargar QR como imagen
+ */
+window.descargarQR = () => {
+    if (!currentQRDocente || !qrCodeInstance) {
+        notyf.error('No hay código QR para descargar');
+        return;
+    }
+
+    try {
+        const canvas = document.querySelector('#qrcode canvas');
+
+        if (!canvas) {
+            notyf.error('Error al obtener código QR');
+            return;
+        }
+
+        // Crear canvas más grande con información adicional
+        const finalCanvas = document.createElement('canvas');
+        const ctx = finalCanvas.getContext('2d');
+
+        // Dimensiones
+        const qrSize = 256;
+        const padding = 40;
+        const textHeight = 120;
+        const width = qrSize + (padding * 2);
+        const height = qrSize + textHeight + (padding * 2);
+
+        finalCanvas.width = width;
+        finalCanvas.height = height;
+
+        // Fondo blanco
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        // Dibujar QR
+        ctx.drawImage(canvas, padding, padding + textHeight, qrSize, qrSize);
+
+        // Texto - Header
+        ctx.fillStyle = '#5046e5';
+        ctx.fillRect(0, 0, width, 60);
+
+        // Título
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px Poppins, Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Tecnológico Nacional de México', width / 2, 25);
+        ctx.font = '14px Poppins, Arial';
+        ctx.fillText('Campus Chilpancingo', width / 2, 45);
+
+        // Información del docente
+        ctx.fillStyle = '#2d3748';
+        ctx.font = 'bold 16px Poppins, Arial';
+        ctx.fillText(`${currentQRDocente.nombre} ${currentQRDocente.apellido}`, width / 2, 85);
+
+        ctx.font = '12px Poppins, Arial';
+        ctx.fillStyle = '#718096';
+        ctx.fillText(`RFC: ${currentQRDocente.rfc || 'N/A'}`, width / 2, 105);
+
+        // Instrucción
+        ctx.fillStyle = '#a0aec0';
+        ctx.font = '11px Poppins, Arial';
+        ctx.fillText('Escanea para ver horario', width / 2, height - 15);
+
+        // Descargar
+        const link = document.createElement('a');
+        link.download = `QR_${currentQRDocente.nombre}_${currentQRDocente.apellido}.png`;
+        link.href = finalCanvas.toDataURL('image/png');
+        link.click();
+
+        notyf.success('Código QR descargado exitosamente');
+
+    } catch (error) {
+        console.error('Error al descargar QR:', error);
+        notyf.error('Error al descargar el código QR');
     }
 };
