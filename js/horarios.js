@@ -5,10 +5,11 @@ const modalManager = new ModalManager();
 // Configuración
 const HORA_INICIO_INSTITUCIONAL = '07:00';
 const HORA_FIN_INSTITUCIONAL = '15:00';
+const RECREO_INICIO = '10:00';
+const RECREO_FIN = '11:00';
 const BLOQUES_HORARIOS = [
     { inicio: '07:00', fin: '08:00', label: '07:00 - 08:00' },
     { inicio: '08:00', fin: '09:00', label: '08:00 - 09:00' },
-    { inicio: '09:00', fin: '10:00', label: '09:00 - 10:00' },
     { inicio: '10:00', fin: '11:00', label: '10:00 - 11:00' },
     { inicio: '11:00', fin: '12:00', label: '11:00 - 12:00' },
     { inicio: '12:00', fin: '13:00', label: '12:00 - 13:00' },
@@ -360,47 +361,43 @@ async function loadGruposByCarreraAndSemestre() {
 // ========== RENDERIZADO ==========
 
 function renderSchedule() {
-    const scheduleGrid = document.querySelector('.schedule-grid');
-    if (!scheduleGrid) return;
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+    const horas = [
+        '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00'
+    ];
 
-    // Limpiar celdas
-    const cells = scheduleGrid.querySelectorAll('.schedule-cell');
-    cells.forEach(cell => {
-        cell.innerHTML = '';
-        cell.className = 'schedule-cell';
-        cell.style.display = ''; // Resetear display
-        cell.style.gridRow = ''; // Resetear gridRow
-    });
+    dias.forEach(dia => {
+        horas.forEach(hora => {
+            const cell = document.querySelector(`.schedule-cell[data-dia="${dia}"][data-hora="${hora}"]`);
+            if (!cell) return;
 
-    // Llenar con horarios
-    horariosData.forEach(horario => {
-        const horaInicio = horario.hora_inicio.substring(0, 5);
-        const horaFin = horario.hora_fin.substring(0, 5);
-        const dia = horario.dia_semana;
+            if (hora === RECREO_INICIO) {
+                return;
+            }
 
-        // Encontrar la celda correspondiente
-        const cell = scheduleGrid.querySelector(
-            `.schedule-cell[data-dia="${dia}"][data-hora="${horaInicio}"]`
-        );
+            cell.innerHTML = '';
+            cell.classList.remove('occupied');
 
-        if (cell) {
-            cell.classList.add('occupied');
+            const horariosEnCelda = horariosData.filter(h => {
+                const horaInicio = h.hora_inicio.substring(0, 5);
+                return h.dia_semana === dia && horaInicio === hora;
+            });
 
-            // Crear el elemento del horario
-            const div = document.createElement('div');
-            div.className = 'schedule-item';
-            div.innerHTML = `
-                <strong>${horario.grupo_nombre}</strong><br>
-                <small>${horario.materia_nombre}</small><br>
-                <small>${horario.aula_nombre} (${horario.aula_edificio})</small><br>
-                <small class="text-muted">${horario.profesor_nombre || 'Sin profesor'}</small>
-            `;
-
-            // Click para ver detalles
-            div.addEventListener('click', () => showHorarioDetails(horario));
-
-            cell.appendChild(div);
-        }
+            if (horariosEnCelda.length > 0) {
+                cell.classList.add('occupied');
+                horariosEnCelda.forEach(horario => {
+                    const item = document.createElement('div');
+                    item.className = 'schedule-item';
+                    item.innerHTML = `
+                        <strong>${horario.grupo_nombre}</strong>
+                        <small>${horario.materia_nombre}</small>
+                        <small class="text-muted">${horario.aula_nombre}</small>
+                    `;
+                    item.onclick = () => showHorarioDetails(horario);
+                    cell.appendChild(item);
+                });
+            }
+        });
     });
 }
 
@@ -564,6 +561,12 @@ async function validateFormFields() {
         showFormValidation('El horario debe estar entre 7:00 AM y 3:00 PM', 'error');
         return;
     }
+
+    if (horaInicio === RECREO_INICIO) {
+        showFormValidation('No se pueden asignar clases durante el recreo (9:00 - 10:00)', 'error');
+        return;
+    }
+
 
     if (horaInicio >= horaFin) {
         showFormValidation('La hora de fin debe ser mayor que la hora de inicio', 'error');

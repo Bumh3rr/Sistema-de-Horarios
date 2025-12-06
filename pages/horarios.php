@@ -67,12 +67,12 @@ requireLogin();
             border-left: 3px solid var(--primary-color);
             background: white;
             border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             height: 100%;
         }
 
         .schedule-item:hover {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
             transform: translateY(-1px);
         }
 
@@ -246,13 +246,13 @@ requireLogin();
             border-left: 3px solid var(--primary-color);
             background: white;
             border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             width: 100%;
             box-sizing: border-box;
         }
 
         .schedule-item:hover {
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
             transform: translateY(-1px);
         }
 
@@ -374,6 +374,10 @@ requireLogin();
                             <div class="legend-color" style="background: white; border: 1px solid #ddd;"></div>
                             <span>Hora disponible</span>
                         </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #fff3cd;"></div>
+                            <span>Recreo</span>
+                        </div>
                     </div>
 
                     <div id="scheduleContainer">
@@ -401,7 +405,11 @@ requireLogin();
                             foreach ($horas as $hora) {
                                 echo "<div class='schedule-time'>{$hora[1]}</div>";
                                 foreach ($dias as $dia) {
-                                    echo "<div class='schedule-cell' data-dia='{$dia}' data-hora='{$hora[0]}'></div>";
+                                    if ($hora[0] === '10:00') {
+                                        echo "<div class='schedule-cell recreo' data-dia='{$dia}' data-hora='{$hora[0]}'><div class='recreo-item'>RECREO</div></div>";
+                                    } else {
+                                        echo "<div class='schedule-cell' data-dia='{$dia}' data-hora='{$hora[0]}'></div>";
+                                    }
                                 }
                             }
                             ?>
@@ -486,22 +494,27 @@ requireLogin();
                 <div class="grid grid-2">
                     <div class="form-group">
                         <label class="form-label">Hora inicio *</label>
-                        <select id="hora_inicio" name="hora_inicio" class="form-input" required disabled>
+                        <select id="hora_inicio" name="hora_inicio" class="form-input" required disabled
+                                aria-describedby="horaHelp">
                             <option value="">Seleccionar hora...</option>
-                            <option value="07:00">07:00 - 08:00</option>
-                            <option value="08:00">08:00 - 09:00</option>
-                            <option value="09:00">09:00 - 10:00</option>
-                            <option value="10:00">10:00 - 11:00</option>
-                            <option value="11:00">11:00 - 12:00</option>
-                            <option value="12:00">12:00 - 13:00</option>
-                            <option value="13:00">13:00 - 14:00</option>
-                            <option value="14:00">14:00 - 15:00</option>
+                            <option value="07:00" data-end="08:00">07:00 - 08:00</option>
+                            <option value="08:00" data-end="09:00">08:00 - 09:00</option>
+                            <option value="09:00" data-end="10:00">09:00 - 10:00</option>
+                            <!-- Recreo: opción no seleccionable -->
+                            <option value="10:00" data-end="11:00" disabled class="recreo-option" aria-disabled="true">
+                                10:00 - 11:00 (RECREO)
+                            </option>
+                            <option value="11:00" data-end="12:00">11:00 - 12:00</option>
+                            <option value="12:00" data-end="13:00">12:00 - 13:00</option>
+                            <option value="13:00" data-end="14:00">13:00 - 14:00</option>
+                            <option value="14:00" data-end="15:00">14:00 - 15:00</option>
                         </select>
-                        <small class="text-muted">Cada clase dura 1 hora</small>
+                        <small id="horaHelp" class="text-muted">Cada clase dura 1 hora.</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Hora fin *</label>
-                        <input type="time" id="hora_fin" name="hora_fin" class="form-input" required style="background-color: #f0f0f0;">
+                        <input type="time" id="hora_fin" name="hora_fin" class="form-input" required
+                               style="background-color: #f0f0f0;">
                         <small class="text-muted">Se calcula automáticamente</small>
                     </div>
                 </div>
