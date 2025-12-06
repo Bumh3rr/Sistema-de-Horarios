@@ -520,6 +520,9 @@ function createHorario() {
     $hora_limite_inicio = strtotime('07:00:00');
     $hora_limite_fin = strtotime('15:00:00');
 
+    $hora_inicio_recreo = strtotime('10:00:00');
+    $hora_fin_recreo = strtotime('11:00:00');
+
     $duracion = ($hora_fin_time - $hora_inicio_time) / 3600;
     if ($duracion != 1) {
         jsonResponse(false, 'Cada clase debe durar exactamente 1 hora');
@@ -531,6 +534,10 @@ function createHorario() {
 
     if ($hora_inicio_time >= $hora_fin_time) {
         jsonResponse(false, 'La hora de fin debe ser mayor que la hora de inicio');
+    }
+
+    if ($hora_inicio_time >= $hora_inicio_recreo && $hora_fin_time <= $hora_fin_recreo) {
+        jsonResponse(false, 'No se pueden programar clases durante el recreo (10:00 AM - 11:00 AM)');
     }
 
     $sql_creditos = "SELECT m.creditos, m.nombre as materia_nombre, 
