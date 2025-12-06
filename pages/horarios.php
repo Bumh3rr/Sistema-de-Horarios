@@ -289,6 +289,17 @@ requireLogin();
         <div class="topbar">
             <h1 class="topbar-title">Gestión de Horarios</h1>
             <div class="topbar-actions">
+                <!-- Nuevo botón para descargar PDF -->
+                <button id="btnDownloadPdf" class="btn btn-outline-secondary" onclick="downloadSchedulePdf()"
+                        title="Descargar horario en PDF" style="margin-left:8px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"
+                         style="vertical-align:middle;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Descargar PDF
+                </button>
                 <button class="btn btn-primary" onclick="openModalHorario()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -335,6 +346,13 @@ requireLogin();
                             <label class="form-label">Aula</label>
                             <select id="filterAula" class="form-input">
                                 <option value="">Todas las aulas</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Materia</label>
+                            <select id="filterMateria" class="form-input">
+                                <option value="">Todas las materias</option>
                             </select>
                         </div>
                     </div>
@@ -506,6 +524,7 @@ requireLogin();
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
 <script src="../js/main.js"></script>
 <script type="module" src="../js/horarios.js"></script>

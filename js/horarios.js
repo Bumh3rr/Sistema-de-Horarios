@@ -21,6 +21,7 @@ let horariosData = [];
 let carrerasData = [];
 let gruposData = [];
 let aulasData = [];
+let materiasData = [];
 
 // Inicializar
 document.addEventListener('DOMContentLoaded', function() {
@@ -34,6 +35,7 @@ async function initializeHorarios() {
         // Cargar datos iniciales
         await Promise.all([
             loadCarreras(),
+            loadMaterias(),
             loadGrupos(),
             loadAulas(),
             loadHorarios()
@@ -63,6 +65,8 @@ function setupEventListeners() {
     const filterSemestre = document.getElementById('filterSemestre');
     const filterGrupo = document.getElementById('filterGrupo');
     const filterAula = document.getElementById('filterAula'); // ← AGREGAR
+    const selMateria = document.getElementById('filterMateria');
+    if (selMateria) selMateria.addEventListener('change', handleFilterChange);
 
     if (filterCarrera) {
         filterCarrera.addEventListener('change', function() {
@@ -160,30 +164,53 @@ async function loadAulas() {
     }
 }
 
-async function loadHorarios() {
+async function loadMaterias() {
     try {
-        const filterCarrera = document.getElementById('filterCarrera')?.value || '';
-        const filterSemestre = document.getElementById('filterSemestre')?.value || '';
-        const filterGrupo = document.getElementById('filterGrupo')?.value || '';
-        const filterAula = document.getElementById('filterAula')?.value || ''; // ← AGREGAR
+        const carreraId = document.getElementById('filterCarrera')?.value;
+        const semestre = document.getElementById('filterSemestre')?.value;
 
-        let url = '../php/horarios_api.php?action=list';
-        if (filterCarrera) url += `&carrera=${filterCarrera}`;
-        if (filterSemestre) url += `&semestre=${filterSemestre}`;
-        if (filterGrupo) url += `&grupo=${filterGrupo}`;
-        if (filterAula) url += `&aula=${filterAula}`; // ← AGREGAR
+        let url = '../php/materias_api.php?action=list';
+        if (carreraId) url += `&carrera=${carreraId}`;
+        if (semestre) url += `&semestre=${semestre}`;
 
         const response = await fetch(url);
         const data = await response.json();
-
         if (data.success) {
-            horariosData = data.data;
+            materiasData = data.data;
+            populateMateriasSelect();
         }
-    } catch (error) {
-        console.error('Error al cargar horarios:', error);
+    } catch (err) {
+        console.error('Error al cargar materias:', err);
     }
 }
 
+async function loadHorarios() {
+    try {
+        const carreraId = document.getElementById('filterCarrera')?.value;
+        const semestre = document.getElementById('filterSemestre')?.value;
+        const grupoId = document.getElementById('filterGrupo')?.value;
+        const aulaId = document.getElementById('filterAula')?.value;
+        const materiaId = document.getElementById('filterMateria')?.value;
+
+        let url = '../php/horarios_api.php?action=schedule';
+        if (grupoId) url += `&grupo=${grupoId}`;
+        if (carreraId) url += `&carrera=${carreraId}`;
+        if (semestre) url += `&semestre=${semestre}`;
+        if (aulaId) url += `&aula=${aulaId}`;
+        if (materiaId) url += `&materia=${materiaId}`;
+
+        const resp = await fetch(url);
+        const json = await resp.json();
+        if (json.success) {
+            horariosData = json.data;
+        } else {
+            horariosData = [];
+        }
+    } catch (error) {
+        console.error('Error al cargar horarios:', error);
+        horariosData = [];
+    }
+}
 // ========== POBLAR SELECTS ==========
 
 function populateCarrerasSelect() {
@@ -294,6 +321,19 @@ function populateFilterAulas() {
             filterAula.appendChild(optgroup);
         });
     }
+}
+
+function populateMateriasSelect() {
+    const filterMateria = document.getElementById('filterMateria');
+    if (!filterMateria) return;
+
+    filterMateria.innerHTML = '<option value="">Todas las materias</option>';
+    materiasData.forEach(materia => {
+        const option = document.createElement('option');
+        option.value = materia.id;
+        option.textContent = `${materia.nombre}${materia.codigo ? ' (' + materia.codigo + ')' : ''}`;
+        filterMateria.appendChild(option);
+    });
 }
 
 async function loadGruposByCarreraAndSemestre() {
@@ -721,4 +761,59 @@ async function showConfirm() {
         const confirmed = confirm(...arguments);
         resolve(confirmed);
     });
+}
+
+// JS: agregar función para generar el PDF - archivo: `js/horarios.js` (añadir al final o donde convenga)
+window.downloadSchedulePdf = function () {
+    // Instancia de notificaciones si no existe (existe notyf en el proyecto)
+    const nf = (typeof Notyf !== 'undefined') ? new Notyf() : null;
+
+    const grid = document.querySelector('#scheduleContainer .schedule-grid');
+    if (!grid) {
+        if (nf) nf.error('Horario no disponible para exportar');
+        return;
+    }
+
+    // Clonar la cuadrícula para no afectar el DOM visible
+    const clone = grid.cloneNode(true);
+
+    // Ajustes visuales para PDF
+    clone.style.maxWidth = '100%';
+    clone.style.boxSizing = 'border-box';
+    clone.style.background = '#ffffff';
+    // Opcional: eliminar elementos interactivos
+    clone.querySelectorAll('button, select, input').forEach(el => el.remove());
+
+    // Wrapper que se agrega temporalmente al body
+    const wrapper = document.createElement('div');
+    wrapper.style.padding = '16px';
+    wrapper.style.background = '#ffffff';
+    wrapper.style.width = '100%';
+    wrapper.style.boxSizing = 'border-box';
+    wrapper.appendChild(clone);
+    // Añadir al DOM (necesario para html2canvas en algunos navegadores)
+    document.body.appendChild(wrapper);
+
+    const opt = {
+        margin:       0.4,
+        filename:     'horario_semanal.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+    };
+
+    if (nf) nf.open({type:'info', message: 'Generando PDF...'});
+
+    html2pdf().set(opt).from(wrapper).save()
+        .then(() => {
+            if (nf) nf.success('PDF generado');
+        })
+        .catch((err) => {
+            if (nf) nf.error('Error al generar PDF');
+            console.error('html2pdf error:', err);
+        })
+        .finally(() => {
+            // limpiar wrapper temporal
+            if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+        });
 }

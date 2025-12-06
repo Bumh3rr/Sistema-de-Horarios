@@ -91,6 +91,7 @@ function listHorarios() {
     $carrera = cleanInput($_GET['carrera'] ?? '');
     $semestre = cleanInput($_GET['semestre'] ?? '');
     $aula = cleanInput($_GET['aula'] ?? '');
+    $materia = cleanInput($_GET['materia'] ?? '');
 
     $sql = "SELECT h.*, 
             g.nombre as grupo_nombre,
@@ -127,6 +128,10 @@ function listHorarios() {
         $sql .= " AND h.aula_id = " . intval($aula);
     }
 
+    if ($materia) {
+        $sql .= " AND m.id = " . intval($materia);
+    }
+
     $sql .= " ORDER BY 
               FIELD(h.dia_semana, 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'),
               h.hora_inicio";
@@ -150,6 +155,7 @@ function getSchedule() {
     $grupo = cleanInput($_GET['grupo'] ?? '');
     $carrera = cleanInput($_GET['carrera'] ?? '');
     $semestre = cleanInput($_GET['semestre'] ?? '');
+    $materia = cleanInput($_GET['materia'] ?? '');
 
     $sql = "SELECT h.*,
             g.nombre as grupo_nombre,
@@ -176,6 +182,10 @@ function getSchedule() {
 
     if ($semestre) {
         $sql .= " AND m.semestre = " . intval($semestre);
+    }
+
+    if ($materia) {
+        $sql .= " AND m.id = " . intval($materia);
     }
 
     $result = $conn->query($sql);
